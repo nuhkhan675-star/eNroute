@@ -37,28 +37,52 @@ export const extracurricularEntrySchema = z.object({
 });
 export type ExtracurricularEntry = z.infer<typeof extracurricularEntrySchema>;
 
-export const budgetIncludesLivingOptions = ["yes", "no", "not_sure"] as const;
+export const examTypes = [
+  "SAT",
+  "ACT",
+  "IELTS",
+  "TOEFL_IBT",
+  "DUOLINGO",
+  "GRE",
+  "GMAT",
+  "PTE_ACADEMIC",
+  "OTHER",
+] as const;
+
+export const EXAM_LABELS: Record<(typeof examTypes)[number], string> = {
+  SAT: "SAT",
+  ACT: "ACT",
+  IELTS: "IELTS",
+  TOEFL_IBT: "TOEFL iBT",
+  DUOLINGO: "Duolingo English Test",
+  GRE: "GRE",
+  GMAT: "GMAT",
+  PTE_ACADEMIC: "PTE Academic",
+  OTHER: "Other",
+};
+
+export const examScoreEntrySchema = z.object({
+  id: z.string(), // client-side draft id
+  examType: z.enum(examTypes),
+  score: z.string().min(1, "Score is required"),
+});
+export type ExamScoreEntry = z.infer<typeof examScoreEntrySchema>;
 
 export const onboardingDraftSchema = z.object({
   curriculumId: z.string().uuid().nullable(),
   subjects: z.array(subjectEntrySchema).default([]),
+  fieldOfInterestId: z.string().uuid().nullable(),
   extracurriculars: z.array(extracurricularEntrySchema).default([]),
-  intendedProgramCategoryId: z.string().uuid().nullable(),
-  preferredCountryIds: z.array(z.string().uuid()).default([]),
-  budgetAmount: z.number().positive().nullable(),
-  budgetCurrency: z.string().nullable(),
-  budgetIncludesLiving: z.enum(budgetIncludesLivingOptions).nullable(),
-  budgetSkipped: z.boolean().default(false),
+  examScores: z.array(examScoreEntrySchema).default([]),
 });
 export type OnboardingDraft = z.infer<typeof onboardingDraftSchema>;
 
 export const ONBOARDING_STEPS = [
   "curriculum",
   "subjects",
+  "fieldOfInterest",
   "extracurriculars",
-  "degree",
-  "countries",
-  "budget",
+  "examScores",
   "review",
 ] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];

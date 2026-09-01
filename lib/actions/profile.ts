@@ -17,8 +17,6 @@ export async function submitOnboarding(draft: OnboardingDraft): Promise<SubmitOn
   if (!user) redirect("/login");
 
   if (!draft.curriculumId) return { error: "Curriculum is required." };
-  if (!draft.intendedProgramCategoryId) return { error: "Intended program is required." };
-  if (draft.preferredCountryIds.length === 0) return { error: "Select at least one country." };
 
   const { data: profile, error: profileError } = await supabase
     .from("student_profiles")
@@ -26,10 +24,7 @@ export async function submitOnboarding(draft: OnboardingDraft): Promise<SubmitOn
       {
         user_id: user.id,
         curriculum_id: draft.curriculumId,
-        intended_program_category_id: draft.intendedProgramCategoryId,
-        budget_amount: draft.budgetSkipped ? null : draft.budgetAmount,
-        budget_currency: draft.budgetSkipped ? null : draft.budgetCurrency,
-        budget_includes_living: draft.budgetSkipped ? null : draft.budgetIncludesLiving,
+        intended_program_category_id: draft.fieldOfInterestId,
         onboarding_completed_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
@@ -46,7 +41,7 @@ export async function submitOnboarding(draft: OnboardingDraft): Promise<SubmitOn
   // edited onboarding form doesn't leave stale entries behind.
   await supabase.from("student_subjects").delete().eq("profile_id", profileId);
   await supabase.from("extracurriculars").delete().eq("profile_id", profileId);
-  await supabase.from("student_countries").delete().eq("profile_id", profileId);
+  await supabase.from("exam_scores").delete().eq("profile_id", profileId);
 
   if (draft.subjects.length > 0) {
     const { error } = await supabase.from("student_subjects").insert(
@@ -76,13 +71,16 @@ export async function submitOnboarding(draft: OnboardingDraft): Promise<SubmitOn
     if (error) return { error: error.message };
   }
 
-  const { error: countriesError } = await supabase.from("student_countries").insert(
-    draft.preferredCountryIds.map((countryId) => ({
-      profile_id: profileId,
-      country_id: countryId,
-    }))
-  );
-  if (countriesError) return { error: countriesError.message };
+  if (draft.examScores.length > 0) {
+    const { error } = await supabase.from("exam_scores").insert(
+      draft.examScores.map((e) => ({
+        profile_id: profileId,
+        exam_type: e.examType,
+        score: e.score,
+      }))
+    );
+    if (error) return { error: error.message };
+  }
 
   return { profileId };
 }

@@ -19,12 +19,11 @@ export async function POST(
   if (!profile) return NextResponse.json({ error: "No profile found. Complete onboarding first." }, { status: 404 });
 
   try {
-    const { academic, extracurricular, majorFit } = await ensureGeneralAnalyses(profile);
+    const { academic, extracurricular } = await ensureGeneralAnalyses(profile);
     const result = await analyzeUniversityProgram({
       profile,
       academic,
       extracurricular,
-      majorFit,
       universityProgramId,
     });
     if (!result) {

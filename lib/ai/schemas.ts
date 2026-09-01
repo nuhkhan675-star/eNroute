@@ -25,6 +25,7 @@ export type ExtracurricularAnalysis = z.infer<typeof extracurricularAnalysisSche
 
 export const majorFitAnalysisSchema = z.object({
   major_fit_score: z.number().min(0).max(10),
+  requirements_fit_score: z.number().min(0).max(10),
   academic_preparation: z.string(),
   extracurricular_relevance: z.string(),
   demonstrated_interest: z.string(),

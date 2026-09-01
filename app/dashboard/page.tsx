@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getDashboardMatches } from "@/lib/db/dashboard";
@@ -31,11 +32,11 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Your profile</h1>
           <p className="text-muted-foreground">
-            {profile.intendedProgramCategory?.name ?? "No program selected"} ·{" "}
-            {profile.preferredCountries.map((c) => c.name).join(", ") || "No countries selected"}
+            {profile.curriculum?.name ?? "No curriculum selected"}
+            {profile.fieldOfInterest ? ` · Interested in ${profile.fieldOfInterest.name}` : ""}
           </p>
         </div>
-        <AnalyzeProfileButton label={profile.profileStrength != null ? "Re-analyze Profile" : "Analyze My Profile"} />
+        <AnalyzeProfileButton label={profile.profileStrength != null ? "Re-analyze Profile" : "Analyse Your Profile"} />
       </div>
 
       {profile.profileStrength != null && (
@@ -52,6 +53,9 @@ export default async function DashboardPage() {
               A composite of your academic, extracurricular, and major-fit analyses — not an admission
               probability.
             </p>
+            <Link href="/" className="mt-3 inline-block text-xs text-primary underline underline-offset-4">
+              See why you got this rating
+            </Link>
           </CardContent>
         </Card>
       )}
@@ -59,17 +63,16 @@ export default async function DashboardPage() {
       {profile.profileStrength == null ? (
         <Card className="mt-8">
           <CardContent className="py-10 text-center text-muted-foreground">
-            Run your analysis to see recommended universities, admission-likelihood estimates, and
-            scholarship opportunities based on your profile.
+            Run your analysis to rate your profile, then check your admission chances on any university
+            page to see it appear here.
           </CardContent>
         </Card>
       ) : (
         <div className="mt-8 flex flex-col gap-8">
           {matches.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No universities in our database currently offer{" "}
-              {profile.intendedProgramCategory?.name ?? "your intended program"} in your preferred
-              countries. Try adding more countries, or search for a specific university below.
+              You haven&apos;t checked your chances at any specific university yet. Browse universities
+              below and click &quot;Analyze My Chances&quot; on a program to see it appear here.
             </p>
           )}
           {GROUPS.map((group) => {

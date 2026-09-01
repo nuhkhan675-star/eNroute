@@ -7,7 +7,12 @@ import { startNewConversation } from "@/lib/actions/chat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default async function ChatIndexPage() {
+export default async function ChatIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ program?: string }>;
+}) {
+  const { program } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,7 +26,11 @@ export default async function ChatIndexPage() {
 
   if (conversations.length === 0) {
     const conversation = await createConversation(profile.id);
-    redirect(`/chat/${conversation.id}`);
+    redirect(program ? `/chat/${conversation.id}?program=${program}` : `/chat/${conversation.id}`);
+  }
+
+  if (program) {
+    redirect(`/chat/${conversations[0].id}?program=${program}`);
   }
 
   return (

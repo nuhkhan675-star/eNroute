@@ -4,6 +4,7 @@ export interface FullStudentProfile {
   id: string;
   userId: string;
   curriculum: { id: string; code: string; name: string } | null;
+  fieldOfInterest: { id: string; name: string; parentGroup: string } | null;
   subjects: { subjectName: string; level: string | null; grade: string; gradeScale: string }[];
   extracurriculars: {
     activityName: string;
@@ -14,12 +15,7 @@ export interface FullStudentProfile {
     achievements: string | null;
     impact: string | null;
   }[];
-  intendedProgramCategory: { id: string; code: string; name: string } | null;
-  preferredCountryIds: string[];
-  preferredCountries: { id: string; name: string }[];
-  budgetAmount: number | null;
-  budgetCurrency: string | null;
-  budgetIncludesLiving: string | null;
+  examScores: { examType: string; score: string }[];
   profileStrength: number | null;
 }
 
@@ -28,7 +24,7 @@ export interface FullStudentProfile {
 // every consumer of "what does this student's profile look like" goes
 // through this one function so the shape can't drift between call sites.
 async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, row: any): Promise<FullStudentProfile> {
-  const [{ data: subjects }, { data: extracurriculars }, { data: countries }] = await Promise.all([
+  const [{ data: subjects }, { data: extracurriculars }, { data: examScores }] = await Promise.all([
     supabase
       .from("student_subjects")
       .select("level, grade, subjects(name, grade_scale)")
@@ -37,10 +33,7 @@ async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>,
       .from("extracurriculars")
       .select("activity_name, category, role, years_involved, description, achievements, impact")
       .eq("profile_id", row.id),
-    supabase
-      .from("student_countries")
-      .select("country_id, countries(id, name)")
-      .eq("profile_id", row.id),
+    supabase.from("exam_scores").select("exam_type, score").eq("profile_id", row.id),
   ]);
 
   return {
@@ -48,6 +41,9 @@ async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>,
     userId: row.user_id,
     curriculum: row.curricula
       ? { id: row.curricula.id, code: row.curricula.code, name: row.curricula.name }
+      : null,
+    fieldOfInterest: row.program_categories
+      ? { id: row.program_categories.id, name: row.program_categories.name, parentGroup: row.program_categories.parent_group }
       : null,
     subjects: (subjects ?? []).map((s: any) => ({
       subjectName: s.subjects?.name ?? "Unknown subject",
@@ -64,21 +60,7 @@ async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>,
       achievements: a.achievements,
       impact: a.impact,
     })),
-    intendedProgramCategory: row.program_categories
-      ? {
-          id: row.program_categories.id,
-          code: row.program_categories.code,
-          name: row.program_categories.name,
-        }
-      : null,
-    preferredCountryIds: (countries ?? []).map((c: any) => c.country_id),
-    preferredCountries: (countries ?? []).map((c: any) => ({
-      id: c.countries?.id,
-      name: c.countries?.name,
-    })),
-    budgetAmount: row.budget_amount,
-    budgetCurrency: row.budget_currency,
-    budgetIncludesLiving: row.budget_includes_living,
+    examScores: (examScores ?? []).map((e: any) => ({ examType: e.exam_type, score: e.score })),
     profileStrength: row.profile_strength,
   };
 }
@@ -87,7 +69,7 @@ export async function getProfileByUserId(userId: string): Promise<FullStudentPro
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("student_profiles")
-    .select("*, curricula(id, code, name), program_categories(id, code, name)")
+    .select("*, curricula(id, code, name), program_categories(id, name, parent_group)")
     .eq("user_id", userId)
     .maybeSingle();
   if (!row) return null;
@@ -98,7 +80,7 @@ export async function getProfileById(profileId: string): Promise<FullStudentProf
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("student_profiles")
-    .select("*, curricula(id, code, name), program_categories(id, code, name)")
+    .select("*, curricula(id, code, name), program_categories(id, name, parent_group)")
     .eq("id", profileId)
     .maybeSingle();
   if (!row) return null;

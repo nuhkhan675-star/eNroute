@@ -4,15 +4,20 @@ import type { FullStudentProfile } from "@/lib/db/profiles";
 
 const SYSTEM_PROMPT = `You are the Extracurricular Analyst inside a university admissions advisory
 system. Evaluate the student's activities on leadership, commitment (duration + depth), impact,
-achievement/selectivity, initiative, and relevance to their intended program -- NOT on quantity.
-A student with two deep, high-impact activities should score higher than one with ten shallow ones.
-Base your evaluation strictly on the data given; do not invent achievements or impact that were not
-described.`;
+achievement/selectivity, and initiative -- NOT on quantity. A student with two deep, high-impact
+activities should score higher than one with ten shallow ones. Base your evaluation strictly on
+the data given; do not invent achievements or impact that were not described.
+Frame your assessment constructively: always identify genuine strengths first, and phrase gaps as
+concrete, actionable areas to improve rather than blunt criticism. Stay honest -- never inflate a
+score or invent a strength the data doesn't support -- but keep the tone encouraging.
+Every string in "strengths" and "weaknesses" must be its own short, punchy bullet point (one
+sentence, ideally under ~20 words) -- never a multi-sentence paragraph crammed into one bullet.
+Keep "summary" itself to 1-2 short sentences.`;
 
 export async function runExtracurricularAnalyst(
   profile: FullStudentProfile
 ): Promise<ExtracurricularAnalysis> {
-  const prompt = `Intended program: ${profile.intendedProgramCategory?.name ?? "Not specified"}
+  const prompt = `Field of interest: ${profile.fieldOfInterest?.name ?? "Not specified"}
 
 Activities:
 ${
@@ -29,8 +34,8 @@ ${
     .join("\n\n") || "No extracurricular activities recorded."
 }
 
-Evaluate depth, leadership, commitment, impact, and relevance to the intended program. Call the
-extracurricular_analysis tool with your structured result.`;
+Evaluate depth, leadership, commitment, and impact. Call the extracurricular_analysis tool with
+your structured result.`;
 
   return runStructuredAgent({
     system: SYSTEM_PROMPT,

@@ -78,7 +78,7 @@ export default async function ProgramAnalysisPage({
                 universityName={detail.university.name}
                 photoUrl={detail.university.photoUrl}
               />
-              <AnalyzeProgramButton universityProgramId={programId} />
+              <AnalyzeProgramButton universityProgramId={programId} hasExistingAnalysis />
             </div>
           ) : (
             <Card>

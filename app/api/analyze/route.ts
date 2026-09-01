@@ -17,8 +17,6 @@ export async function POST() {
     const result = await analyzeProfile(profile.id);
     return NextResponse.json({
       profileStrength: result.profileStrength,
-      matchCount: result.matches.length,
-      analyzedCount: result.programAnalyses.length,
     });
   } catch (err) {
     console.error("Profile analysis failed", err);

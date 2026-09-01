@@ -22,8 +22,16 @@ interface Props {
   photoUrl?: string | null;
 }
 
+const SCORE_ROWS: { key: keyof NonNullable<Props["bundle"]["scores"]>; label: string }[] = [
+  { key: "academic", label: "Academic competitiveness" },
+  { key: "programFit", label: "Program fit" },
+  { key: "extracurricular", label: "Extracurricular profile" },
+  { key: "requirementsFit", label: "Requirements fit" },
+  { key: "overall", label: "Overall competitiveness" },
+];
+
 export function ProgramAnalysis({ bundle, universityName, photoUrl }: Props) {
-  const { classification, finalStrategy, scholarshipAnalysis, costEstimate } = bundle;
+  const { classification, finalStrategy, scholarshipAnalysis, scores } = bundle;
 
   return (
     <div className="flex flex-col gap-4">
@@ -48,12 +56,32 @@ export function ProgramAnalysis({ bundle, universityName, photoUrl }: Props) {
           <p className="text-xs text-muted-foreground">
             {finalStrategy.confidence} confidence · This is a model-based estimate, not a guaranteed
             outcome, computed from your profile and whatever verified admissions data we have — never
-            an invented exact probability.
+            an invented exact probability, not an official admission prediction.
           </p>
           <Separator />
           <p className="text-sm">{finalStrategy.narrative}</p>
         </CardContent>
       </Card>
+
+      {scores && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Model assessment</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Our model&apos;s read of your profile against this program -- not an official university
+              score.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {SCORE_ROWS.map((row) => (
+              <div key={row.key} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-medium">{scores[row.key].toFixed(1)}/10</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -124,27 +152,6 @@ export function ProgramAnalysis({ bundle, universityName, photoUrl }: Props) {
                 </p>
                 <p className="text-sm text-muted-foreground">{s.reasoning}</p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {costEstimate && costEstimate.tuitionAmount != null && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Estimated cost</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <p className="text-sm">
-              Best case (likely scholarships applied): {costEstimate.bestCaseNetCost} {costEstimate.currency}
-            </p>
-            <p className="text-sm">
-              Worst case (no scholarships): {costEstimate.worstCaseNetCost} {costEstimate.currency}
-            </p>
-            {costEstimate.notes.map((n, i) => (
-              <p key={i} className="text-xs text-muted-foreground">
-                {n}
-              </p>
             ))}
           </CardContent>
         </Card>

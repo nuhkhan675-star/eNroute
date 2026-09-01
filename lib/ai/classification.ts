@@ -24,20 +24,34 @@ export interface ClassificationResult {
   competitivenessIndex: number; // 0-100, for display/debugging
 }
 
-const LIKELIHOOD_RANGES: Record<Classification, string> = {
-  reach: "Estimated admission likelihood: 5–25%",
-  target: "Estimated admission likelihood: 25–55%",
-  likely: "Estimated admission likelihood: 55–85%",
+// Each bucket's displayable range is not one fixed string for everyone in
+// the bucket -- it's a ~18-point-wide band positioned by where the student's
+// competitivenessIndex falls WITHIN that bucket's own threshold span, so two
+// "Reach" students with very different scores don't both see "5-25%".
+const BUCKET_DISPLAY_BOUNDS: Record<Classification, [number, number]> = {
+  reach: [2, 30],
+  target: [22, 62],
+  likely: [55, 92],
 };
+const BAND_WIDTH = 18;
+
+function bandFor(classification: Classification, t: number): string {
+  const [lo, hi] = BUCKET_DISPLAY_BOUNDS[classification];
+  const clampedT = Math.max(0, Math.min(1, t));
+  const center = lo + (hi - lo) * clampedT;
+  const half = BAND_WIDTH / 2;
+  const bandLo = Math.round(Math.max(lo, center - half));
+  const bandHi = Math.round(Math.min(hi, center + half));
+  return `Estimated admission likelihood: ${bandLo}–${bandHi}%`;
+}
 
 export function classifyAdmissionLikelihood(input: ClassificationInput): ClassificationResult {
   const competitivenessIndex =
     (input.academicScore * 0.5 + input.majorFitScore * 0.3 + input.extracurricularScore * 0.2) * 10;
 
-  let classification: Classification;
+  let likelyThreshold: number;
+  let targetThreshold: number;
   if (input.acceptanceRate != null) {
-    let likelyThreshold: number;
-    let targetThreshold: number;
     if (input.acceptanceRate <= 15) {
       likelyThreshold = 85;
       targetThreshold = 65;
@@ -48,15 +62,27 @@ export function classifyAdmissionLikelihood(input: ClassificationInput): Classif
       likelyThreshold = 60;
       targetThreshold = 40;
     }
-    classification =
-      competitivenessIndex >= likelyThreshold
-        ? "likely"
-        : competitivenessIndex >= targetThreshold
-          ? "target"
-          : "reach";
   } else {
-    // No factual acceptance rate to anchor against -- lean more conservative.
-    classification = competitivenessIndex >= 80 ? "likely" : competitivenessIndex >= 55 ? "target" : "reach";
+    // No factual acceptance rate to anchor against. These thresholds are
+    // intentionally more forgiving than a data-anchored program, since a
+    // solid-but-imperfect profile shouldn't default to "Reach" just because
+    // we have no acceptance-rate fact to compare it against.
+    likelyThreshold = 72;
+    targetThreshold = 45;
+  }
+
+  const classification: Classification =
+    competitivenessIndex >= likelyThreshold ? "likely" : competitivenessIndex >= targetThreshold ? "target" : "reach";
+
+  // Position within the bucket's own threshold span (0 = just crossed into
+  // this bucket, 1 = at the top of it) drives where the display band sits.
+  let t: number;
+  if (classification === "likely") {
+    t = (competitivenessIndex - likelyThreshold) / Math.max(1, 100 - likelyThreshold);
+  } else if (classification === "target") {
+    t = (competitivenessIndex - targetThreshold) / Math.max(1, likelyThreshold - targetThreshold);
+  } else {
+    t = competitivenessIndex / Math.max(1, targetThreshold);
   }
 
   const hasCompleteProfile = input.hasSubjects && input.hasExtracurriculars;
@@ -71,7 +97,7 @@ export function classifyAdmissionLikelihood(input: ClassificationInput): Classif
 
   return {
     classification,
-    likelihoodRangeLabel: LIKELIHOOD_RANGES[classification],
+    likelihoodRangeLabel: bandFor(classification, t),
     confidence,
     competitivenessIndex: Math.round(competitivenessIndex),
   };

@@ -6,10 +6,13 @@ import { ChatWindow } from "@/components/chat/ChatWindow";
 
 export default async function ChatConversationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ conversationId: string }>;
+  searchParams: Promise<{ program?: string }>;
 }) {
   const { conversationId } = await params;
+  const { program } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -30,6 +33,7 @@ export default async function ChatConversationPage({
       <ChatWindow
         conversationId={conversationId}
         initialMessages={messages.map((m) => ({ id: m.id, role: m.role, content: m.content }))}
+        focusedUniversityProgramId={program}
       />
     </div>
   );

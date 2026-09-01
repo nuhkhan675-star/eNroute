@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
+  ExamScoreEntry,
   ExtracurricularEntry,
   OnboardingDraft,
   SubjectEntry,
@@ -9,13 +10,9 @@ import type {
 const emptyDraft: OnboardingDraft = {
   curriculumId: null,
   subjects: [],
+  fieldOfInterestId: null,
   extracurriculars: [],
-  intendedProgramCategoryId: null,
-  preferredCountryIds: [],
-  budgetAmount: null,
-  budgetCurrency: null,
-  budgetIncludesLiving: null,
-  budgetSkipped: false,
+  examScores: [],
 };
 
 interface OnboardingState {
@@ -24,12 +21,12 @@ interface OnboardingState {
   addSubject: (entry: SubjectEntry) => void;
   removeSubject: (index: number) => void;
   setSubjects: (entries: SubjectEntry[]) => void;
+  setFieldOfInterest: (fieldOfInterestId: string | null) => void;
   addExtracurricular: (entry: ExtracurricularEntry) => void;
   updateExtracurricular: (id: string, patch: Partial<ExtracurricularEntry>) => void;
   removeExtracurricular: (id: string) => void;
-  setIntendedProgramCategory: (categoryId: string | null) => void;
-  setPreferredCountries: (countryIds: string[]) => void;
-  setBudget: (patch: Partial<Pick<OnboardingDraft, "budgetAmount" | "budgetCurrency" | "budgetIncludesLiving" | "budgetSkipped">>) => void;
+  addExamScore: (entry: ExamScoreEntry) => void;
+  removeExamScore: (id: string) => void;
   reset: () => void;
 }
 
@@ -46,6 +43,8 @@ export const useOnboardingStore = create<OnboardingState>()(
           draft: { ...s.draft, subjects: s.draft.subjects.filter((_, i) => i !== index) },
         })),
       setSubjects: (entries) => set((s) => ({ draft: { ...s.draft, subjects: entries } })),
+      setFieldOfInterest: (fieldOfInterestId) =>
+        set((s) => ({ draft: { ...s.draft, fieldOfInterestId } })),
       addExtracurricular: (entry) =>
         set((s) => ({
           draft: { ...s.draft, extracurriculars: [...s.draft.extracurriculars, entry] },
@@ -66,13 +65,14 @@ export const useOnboardingStore = create<OnboardingState>()(
             extracurriculars: s.draft.extracurriculars.filter((e) => e.id !== id),
           },
         })),
-      setIntendedProgramCategory: (categoryId) =>
-        set((s) => ({ draft: { ...s.draft, intendedProgramCategoryId: categoryId } })),
-      setPreferredCountries: (countryIds) =>
-        set((s) => ({ draft: { ...s.draft, preferredCountryIds: countryIds } })),
-      setBudget: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
+      addExamScore: (entry) =>
+        set((s) => ({ draft: { ...s.draft, examScores: [...s.draft.examScores, entry] } })),
+      removeExamScore: (id) =>
+        set((s) => ({
+          draft: { ...s.draft, examScores: s.draft.examScores.filter((e) => e.id !== id) },
+        })),
       reset: () => set({ draft: emptyDraft }),
     }),
-    { name: "admissions-onboarding-draft" }
+    { name: "admissions-onboarding-draft-v3" }
   )
 );

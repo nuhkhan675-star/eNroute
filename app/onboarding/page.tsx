@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurricula, getProgramCategories, getCountries } from "@/lib/db/reference";
+import { getCurricula, getProgramCategories } from "@/lib/db/reference";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export default async function OnboardingPage() {
@@ -10,19 +10,11 @@ export default async function OnboardingPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/signup");
 
-  const [curricula, programCategories, countries] = await Promise.all([
-    getCurricula(),
-    getProgramCategories(),
-    getCountries(),
-  ]);
+  const [curricula, categories] = await Promise.all([getCurricula(), getProgramCategories()]);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
-      <OnboardingWizard
-        curricula={curricula}
-        programCategories={programCategories}
-        countries={countries}
-      />
+      <OnboardingWizard curricula={curricula} categories={categories} />
     </div>
   );
 }

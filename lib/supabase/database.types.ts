@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -395,6 +395,38 @@ export type Database = {
           },
         ]
       }
+      exam_scores: {
+        Row: {
+          created_at: string
+          exam_type: string
+          id: string
+          profile_id: string
+          score: string
+        }
+        Insert: {
+          created_at?: string
+          exam_type: string
+          id?: string
+          profile_id: string
+          score: string
+        }
+        Update: {
+          created_at?: string
+          exam_type?: string
+          id?: string
+          profile_id?: string
+          score?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurriculars: {
         Row: {
           achievements: string | null
@@ -603,9 +635,6 @@ export type Database = {
       }
       student_profiles: {
         Row: {
-          budget_amount: number | null
-          budget_currency: string | null
-          budget_includes_living: string | null
           created_at: string
           curriculum_id: string | null
           id: string
@@ -616,9 +645,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          budget_amount?: number | null
-          budget_currency?: string | null
-          budget_includes_living?: string | null
           created_at?: string
           curriculum_id?: string | null
           id?: string
@@ -629,9 +655,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          budget_amount?: number | null
-          budget_currency?: string | null
-          budget_includes_living?: string | null
           created_at?: string
           curriculum_id?: string | null
           id?: string
@@ -861,6 +884,7 @@ export type Database = {
       }
       university_programs: {
         Row: {
+          campus: string | null
           created_at: string
           data_source_id: string | null
           data_year: number | null
@@ -868,14 +892,17 @@ export type Database = {
           delivery_mode: string | null
           display_name: string
           duration_years: number | null
+          faculty: string | null
           id: string
           last_verified_at: string | null
+          official_url: string | null
           overview: string | null
           program_id: string
           university_id: string
           updated_at: string
         }
         Insert: {
+          campus?: string | null
           created_at?: string
           data_source_id?: string | null
           data_year?: number | null
@@ -883,14 +910,17 @@ export type Database = {
           delivery_mode?: string | null
           display_name: string
           duration_years?: number | null
+          faculty?: string | null
           id?: string
           last_verified_at?: string | null
+          official_url?: string | null
           overview?: string | null
           program_id: string
           university_id: string
           updated_at?: string
         }
         Update: {
+          campus?: string | null
           created_at?: string
           data_source_id?: string | null
           data_year?: number | null
@@ -898,8 +928,10 @@ export type Database = {
           delivery_mode?: string | null
           display_name?: string
           duration_years?: number | null
+          faculty?: string | null
           id?: string
           last_verified_at?: string | null
+          official_url?: string | null
           overview?: string | null
           program_id?: string
           university_id?: string
@@ -922,6 +954,60 @@ export type Database = {
           },
           {
             foreignKeyName: "university_programs_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_rankings: {
+        Row: {
+          created_at: string
+          id: string
+          last_verified_at: string | null
+          ranking_org: string
+          ranking_type: string
+          ranking_value: number
+          ranking_year: number
+          source_url: string | null
+          subject_category_id: string | null
+          university_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_verified_at?: string | null
+          ranking_org: string
+          ranking_type: string
+          ranking_value: number
+          ranking_year: number
+          source_url?: string | null
+          subject_category_id?: string | null
+          university_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_verified_at?: string | null
+          ranking_org?: string
+          ranking_type?: string
+          ranking_value?: number
+          ranking_year?: number
+          source_url?: string | null
+          subject_category_id?: string | null
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_rankings_subject_category_id_fkey"
+            columns: ["subject_category_id"]
+            isOneToOne: false
+            referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_rankings_university_id_fkey"
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"

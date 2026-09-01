@@ -1,11 +1,12 @@
 import { getUniversityProgramDetail } from "@/lib/db/universities";
 import { saveAnalysis } from "@/lib/db/analyses";
+import { runMajorFitAnalyst } from "@/lib/ai/agents/majorFitAnalyst";
 import { runScholarshipAnalyst } from "@/lib/ai/agents/scholarshipAnalyst";
 import { runFinalStrategist } from "@/lib/ai/agents/finalStrategist";
 import { classifyAdmissionLikelihood } from "@/lib/ai/classification";
-import { computeCostEstimate } from "@/lib/ai/costEstimate";
 import type { FullStudentProfile } from "@/lib/db/profiles";
-import type { AcademicAnalysis, ExtracurricularAnalysis, MajorFitAnalysis } from "@/lib/ai/schemas";
+import type { AcademicAnalysis, ExtracurricularAnalysis } from "@/lib/ai/schemas";
+import type { ModelAssessmentScores } from "@/lib/db/analyses";
 
 export interface ProgramAnalysisResult {
   universityProgramId: string;
@@ -14,29 +15,38 @@ export interface ProgramAnalysisResult {
   classification: ReturnType<typeof classifyAdmissionLikelihood>;
   finalStrategy: Awaited<ReturnType<typeof runFinalStrategist>>;
   scholarshipAnalysis: Awaited<ReturnType<typeof runScholarshipAnalyst>>;
-  costEstimate: ReturnType<typeof computeCostEstimate>;
+  scores: ModelAssessmentScores;
   factualAcceptanceRate: number | null;
 }
 
 // Runs the university-specific half of the pipeline (steps 5-6 of the
-// orchestration) for one candidate program: scholarship analysis, cost
-// estimate, deterministic classification, final strategist -- and persists
-// each to ai_analyses. Reused both by the bulk orchestrator (top-N matches)
-// and by the "Analyze My Chances" button on a single program page.
+// orchestration) for one candidate program: scholarship analysis,
+// deterministic classification, final strategist -- and persists each to
+// ai_analyses. Reused both by the bulk orchestrator (top-N matches) and by
+// the "Analyze My Chances" button on a single program page.
 export async function analyzeUniversityProgram(params: {
   profile: FullStudentProfile;
   academic: AcademicAnalysis;
   extracurricular: ExtracurricularAnalysis;
-  majorFit: MajorFitAnalysis;
   universityProgramId: string;
 }): Promise<ProgramAnalysisResult | null> {
-  const { profile, academic, extracurricular, majorFit, universityProgramId } = params;
+  const { profile, academic, extracurricular, universityProgramId } = params;
 
   const detail = await getUniversityProgramDetail(universityProgramId);
   if (!detail) return null;
 
+  const requirementInputs = detail.requirements.map((r) => ({ description: r.description, minGrade: r.minGrade }));
+
+  const majorFit = await runMajorFitAnalyst(profile, academic, extracurricular, detail.displayName, requirementInputs);
+  await saveAnalysis({
+    profileId: profile.id,
+    universityProgramId,
+    analysisType: "major_fit",
+    input: { targetProgramName: detail.displayName },
+    output: majorFit,
+  });
+
   const latestStats = [...detail.admissionStatistics].sort((a, b) => b.year - a.year)[0] ?? null;
-  const latestTuition = [...detail.tuition].sort((a, b) => b.year - a.year)[0] ?? null;
 
   const scholarshipInputs = detail.scholarships.map((s) => ({
     name: s.name,
@@ -46,28 +56,13 @@ export async function analyzeUniversityProgram(params: {
     eligibilityText: s.eligibilityText,
   }));
 
-  const scholarshipAnalysis = await runScholarshipAnalyst(profile, academic, extracurricular, scholarshipInputs);
+  const scholarshipAnalysis = await runScholarshipAnalyst(academic, extracurricular, scholarshipInputs);
   await saveAnalysis({
     profileId: profile.id,
     universityProgramId,
     analysisType: "scholarship",
     input: { scholarshipInputs },
     output: scholarshipAnalysis,
-  });
-
-  const costEstimate = computeCostEstimate(
-    latestTuition?.internationalAmount ?? null,
-    latestTuition?.currency ?? null,
-    scholarshipInputs,
-    scholarshipAnalysis
-  );
-  await saveAnalysis({
-    profileId: profile.id,
-    universityProgramId,
-    analysisType: "cost",
-    input: { latestTuition },
-    output: costEstimate,
-    modelUsed: "deterministic-cost-calc",
   });
 
   const classification = classifyAdmissionLikelihood({
@@ -89,6 +84,7 @@ export async function analyzeUniversityProgram(params: {
     majorFit,
     classification,
     factualAcceptanceRate: latestStats?.acceptanceRate ?? null,
+    requirements: requirementInputs,
   });
   await saveAnalysis({
     profileId: profile.id,
@@ -105,7 +101,13 @@ export async function analyzeUniversityProgram(params: {
     classification,
     finalStrategy,
     scholarshipAnalysis,
-    costEstimate,
+    scores: {
+      academic: academic.academic_score,
+      extracurricular: extracurricular.extracurricular_score,
+      programFit: majorFit.major_fit_score,
+      requirementsFit: majorFit.requirements_fit_score,
+      overall: Math.round(classification.competitivenessIndex) / 10,
+    },
     factualAcceptanceRate: latestStats?.acceptanceRate ?? null,
   };
 }

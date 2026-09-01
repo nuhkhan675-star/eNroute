@@ -10,15 +10,14 @@ interface Props {
   sizes?: string;
 }
 
-// Many universities' Wikipedia lead image is a seal/coat-of-arms rendered as
-// dark line art on a transparent background -- invisible against our dark
-// theme's cards. A light backdrop plus object-contain (rather than cover)
-// keeps both crests and real campus photos legible without cropping.
+// Real campus photos should fill the frame edge-to-edge like any other photo
+// grid (object-cover, no padding). The light neutral backdrop only matters
+// for the icon fallback when no photo exists.
 export function UniversityPhoto({ photoUrl, alt, className, iconClassName, sizes = "200px" }: Props) {
   return (
-    <div className={cn("relative flex items-center justify-center bg-neutral-100", className)}>
+    <div className={cn("relative flex items-center justify-center overflow-hidden bg-neutral-100", className)}>
       {photoUrl ? (
-        <Image src={photoUrl} alt={alt} fill sizes={sizes} className="object-contain p-2" unoptimized />
+        <Image src={photoUrl} alt={alt} fill sizes={sizes} className="object-cover" unoptimized />
       ) : (
         <GraduationCap className={cn("size-8 text-neutral-400", iconClassName)} />
       )}

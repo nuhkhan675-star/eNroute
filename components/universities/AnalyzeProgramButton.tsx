@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export function AnalyzeProgramButton({ universityProgramId }: { universityProgramId: string }) {
+export function AnalyzeProgramButton({
+  universityProgramId,
+  hasExistingAnalysis = false,
+}: {
+  universityProgramId: string;
+  hasExistingAnalysis?: boolean;
+}) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -30,7 +36,11 @@ export function AnalyzeProgramButton({ universityProgramId }: { universityProgra
   return (
     <div className="flex flex-col items-center gap-2">
       <Button onClick={handleClick} disabled={isAnalyzing}>
-        {isAnalyzing ? "Analyzing your chances…" : "Analyze My Chances"}
+        {isAnalyzing
+          ? "Analyzing your chances…"
+          : hasExistingAnalysis
+            ? "Re-analyze My Chances"
+            : "Analyze My Chances"}
       </Button>
       {error && <p className="max-w-sm text-center text-sm text-destructive">{error}</p>}
     </div>

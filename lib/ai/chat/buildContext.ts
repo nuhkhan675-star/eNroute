@@ -1,5 +1,6 @@
 import type { FullStudentProfile } from "@/lib/db/profiles";
 import { getLatestAnalysis, getAllFinalStrategiesForProfile } from "@/lib/db/analyses";
+import { getUniversityProgramDetail } from "@/lib/db/universities";
 
 export const CHAT_SYSTEM_PROMPT_HEADER = `You are this student's personal university admissions advisor. You are
 NOT a generic chatbot -- you have their actual stored profile and actual university data below, and you
@@ -21,16 +22,18 @@ export async function buildChatContext(
   profile: FullStudentProfile,
   focusedUniversityProgramId?: string | null
 ): Promise<string> {
-  const [academic, extracurricular, majorFit, allStrategies] = await Promise.all([
+  const [academic, extracurricular, majorFit, allStrategies, focusedProgramDetail] = await Promise.all([
     getLatestAnalysis(profile.id, "academic"),
     getLatestAnalysis(profile.id, "extracurricular"),
-    getLatestAnalysis(profile.id, "major_fit"),
+    focusedUniversityProgramId ? getLatestAnalysis(profile.id, "major_fit", focusedUniversityProgramId) : null,
     getAllFinalStrategiesForProfile(profile.id),
+    focusedUniversityProgramId ? getUniversityProgramDetail(focusedUniversityProgramId) : null,
   ]);
 
   const parts: string[] = [CHAT_SYSTEM_PROMPT_HEADER, "\n--- STUDENT PROFILE ---"];
 
   parts.push(`Curriculum: ${profile.curriculum?.name ?? "Not specified"}`);
+  parts.push(`Field of interest: ${profile.fieldOfInterest?.name ?? "Not specified"}`);
   parts.push(
     `Subjects: ${
       profile.subjects
@@ -43,11 +46,9 @@ export async function buildChatContext(
       profile.extracurriculars.map((a) => `${a.activityName} (${a.category})`).join("; ") || "None recorded"
     }`
   );
-  parts.push(`Intended program: ${profile.intendedProgramCategory?.name ?? "Not specified"}`);
-  parts.push(`Preferred countries: ${profile.preferredCountries.map((c) => c.name).join(", ") || "None"}`);
   parts.push(
-    `Budget: ${
-      profile.budgetAmount ? `${profile.budgetAmount} ${profile.budgetCurrency ?? ""} / year` : "Not specified"
+    `Exam scores: ${
+      profile.examScores.map((e) => `${e.examType}: ${e.score}`).join(", ") || "None recorded"
     }`
   );
   parts.push(`Profile strength (composite, not a probability): ${profile.profileStrength ?? "Not yet analyzed"}`);
@@ -55,7 +56,43 @@ export async function buildChatContext(
   if (academic) parts.push(`\n--- ACADEMIC ANALYSIS (INFERENCE) ---\n${JSON.stringify(academic.output)}`);
   if (extracurricular)
     parts.push(`\n--- EXTRACURRICULAR ANALYSIS (INFERENCE) ---\n${JSON.stringify(extracurricular.output)}`);
-  if (majorFit) parts.push(`\n--- MAJOR FIT ANALYSIS (INFERENCE) ---\n${JSON.stringify(majorFit.output)}`);
+  if (majorFit)
+    parts.push(`\n--- MAJOR FIT ANALYSIS FOR CURRENTLY VIEWED PROGRAM (INFERENCE) ---\n${JSON.stringify(majorFit.output)}`);
+
+  if (focusedProgramDetail) {
+    parts.push(`\n--- CURRENTLY VIEWED PROGRAM FACTS (FACT, from our database) ---`);
+    parts.push(
+      `${focusedProgramDetail.university.name} -- ${focusedProgramDetail.displayName} (${focusedProgramDetail.degreeLevel})`
+    );
+    parts.push(
+      `Requirements: ${
+        focusedProgramDetail.requirements
+          .map((r) => `${r.description}${r.minGrade ? ` (min: ${r.minGrade})` : ""}`)
+          .join("; ") || "None recorded"
+      }`
+    );
+    parts.push(
+      `Tuition: ${
+        focusedProgramDetail.tuition
+          .map((t) => `${t.year}: ${t.internationalAmount ?? "unavailable"} ${t.currency} (international)`)
+          .join("; ") || "None recorded"
+      }`
+    );
+    parts.push(
+      `Scholarships: ${
+        focusedProgramDetail.scholarships
+          .map((s) => `${s.name} (${s.amountType}${s.amount ? `, ${s.amount} ${s.currency ?? ""}` : ""})`)
+          .join("; ") || "None recorded"
+      }`
+    );
+    parts.push(
+      `Deadlines: ${
+        focusedProgramDetail.deadlines
+          .map((d) => `${d.deadlineType}${d.applicantType ? ` (${d.applicantType})` : ""}: ${d.date ?? "TBD"}`)
+          .join("; ") || "None recorded"
+      }`
+    );
+  }
 
   if (allStrategies.length > 0) {
     parts.push("\n--- UNIVERSITY-SPECIFIC ANALYSES ALREADY COMPUTED ---");

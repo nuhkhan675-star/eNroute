@@ -17,7 +17,7 @@ export function AnalyzeProfileButton({ label = "Analyze My Profile" }: { label?:
       const res = await fetch("/api/analyze", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analysis failed");
-      toast.success(`Analyzed ${data.analyzedCount} matched universities.`);
+      toast.success("Profile analyzed.");
       router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Analysis failed";

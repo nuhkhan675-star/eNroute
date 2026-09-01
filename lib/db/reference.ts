@@ -74,3 +74,14 @@ export async function getCountries(): Promise<Country[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getCountryById(id: string): Promise<Country | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("countries")
+    .select("id, iso_code, name")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}

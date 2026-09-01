@@ -1,6 +1,5 @@
 import { runStructuredAgent } from "@/lib/ai/client";
 import { scholarshipAnalysisSchema, type ScholarshipAnalysis, type AcademicAnalysis, type ExtracurricularAnalysis } from "@/lib/ai/schemas";
-import type { FullStudentProfile } from "@/lib/db/profiles";
 
 const SYSTEM_PROMPT = `You are the Scholarship Analyst inside a university admissions advisory
 system. You are given a list of scholarships that ACTUALLY EXIST for this university/program
@@ -18,7 +17,6 @@ export interface ScholarshipInput {
 }
 
 export async function runScholarshipAnalyst(
-  profile: FullStudentProfile,
   academic: AcademicAnalysis,
   extracurricular: ExtracurricularAnalysis,
   scholarships: ScholarshipInput[]
@@ -33,7 +31,6 @@ export async function runScholarshipAnalyst(
 
   const prompt = `Student academic summary: ${academic.summary}
 Student extracurricular summary: ${extracurricular.summary}
-Intended program: ${profile.intendedProgramCategory?.name ?? "Not specified"}
 
 Scholarships on record for this university/program:
 ${scholarships

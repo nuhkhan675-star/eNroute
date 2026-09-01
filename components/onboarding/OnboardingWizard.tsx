@@ -3,32 +3,29 @@
 import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { ONBOARDING_STEPS, type OnboardingStep } from "@/lib/validation/onboarding";
-import type { Curriculum, ProgramCategory, Country } from "@/lib/db/reference";
+import type { Curriculum, ProgramCategory } from "@/lib/db/reference";
 import { StepCurriculum } from "./steps/StepCurriculum";
 import { StepSubjects } from "./steps/StepSubjects";
+import { StepFieldOfInterest } from "./steps/StepFieldOfInterest";
 import { StepExtracurriculars } from "./steps/StepExtracurriculars";
-import { StepDegree } from "./steps/StepDegree";
-import { StepCountries } from "./steps/StepCountries";
-import { StepBudget } from "./steps/StepBudget";
+import { StepExamScores } from "./steps/StepExamScores";
 import { StepReview } from "./steps/StepReview";
 
 const STEP_LABELS: Record<OnboardingStep, string> = {
   curriculum: "Curriculum",
   subjects: "Subjects & Grades",
+  fieldOfInterest: "Field of Interest",
   extracurriculars: "Extracurriculars",
-  degree: "Intended Degree",
-  countries: "Preferred Countries",
-  budget: "Budget",
+  examScores: "Test Scores",
   review: "Review & Analyze",
 };
 
 interface Props {
   curricula: Curriculum[];
-  programCategories: ProgramCategory[];
-  countries: Country[];
+  categories: ProgramCategory[];
 }
 
-export function OnboardingWizard({ curricula, programCategories, countries }: Props) {
+export function OnboardingWizard({ curricula, categories }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const step = ONBOARDING_STEPS[stepIndex];
 
@@ -49,22 +46,12 @@ export function OnboardingWizard({ curricula, programCategories, countries }: Pr
 
       {step === "curriculum" && <StepCurriculum curricula={curricula} onNext={goNext} />}
       {step === "subjects" && <StepSubjects curricula={curricula} onNext={goNext} onBack={goBack} />}
+      {step === "fieldOfInterest" && (
+        <StepFieldOfInterest categories={categories} onNext={goNext} onBack={goBack} />
+      )}
       {step === "extracurriculars" && <StepExtracurriculars onNext={goNext} onBack={goBack} />}
-      {step === "degree" && (
-        <StepDegree programCategories={programCategories} onNext={goNext} onBack={goBack} />
-      )}
-      {step === "countries" && (
-        <StepCountries countries={countries} onNext={goNext} onBack={goBack} />
-      )}
-      {step === "budget" && <StepBudget onNext={goNext} onBack={goBack} />}
-      {step === "review" && (
-        <StepReview
-          curricula={curricula}
-          programCategories={programCategories}
-          countries={countries}
-          onBack={goBack}
-        />
-      )}
+      {step === "examScores" && <StepExamScores onNext={goNext} onBack={goBack} />}
+      {step === "review" && <StepReview curricula={curricula} categories={categories} onBack={goBack} />}
     </div>
   );
 }
