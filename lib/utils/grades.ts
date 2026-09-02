@@ -9,6 +9,8 @@ export function getGradeOptionsForScale(scale: string): string[] {
       return ["5", "4", "3", "2", "1"];
     case "A*-E":
       return ["A*", "A", "B", "C", "D", "E", "U"];
+    case "A*-G":
+      return ["A*", "A", "B", "C", "D", "E", "F", "G", "U"];
     case "A-E":
       return ["A", "B", "C", "D", "E"];
     case "A-F":

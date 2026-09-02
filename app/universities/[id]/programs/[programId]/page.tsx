@@ -77,6 +77,7 @@ export default async function ProgramAnalysisPage({
                 bundle={bundle}
                 universityName={detail.university.name}
                 photoUrl={detail.university.photoUrl}
+                factualRate={detail.admissionStatistics[0] ?? null}
               />
               <AnalyzeProgramButton universityProgramId={programId} hasExistingAnalysis />
             </div>

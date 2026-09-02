@@ -19,6 +19,12 @@ Keep "summary" itself to 1-2 short sentences.`;
 export async function runAcademicAnalyst(profile: FullStudentProfile): Promise<AcademicAnalysis> {
   const prompt = `Student curriculum: ${profile.curriculum?.name ?? "Unknown"}
 Field of interest: ${profile.fieldOfInterest?.name ?? "Not specified"}
+Grade 10 / secondary school (${profile.grade10Board || "board not specified"}):
+${
+  profile.grade10Subjects.length > 0
+    ? profile.grade10Subjects.map((s) => `- ${s.subjectName}: ${s.grade}`).join("\n")
+    : "Not provided"
+}
 
 Subjects and grades:
 ${profile.subjects

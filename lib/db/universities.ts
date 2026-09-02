@@ -212,6 +212,7 @@ export interface UniversityWithPrograms {
   description: string | null;
   photoUrl: string | null;
   photoAttribution: string | null;
+  photoSourceUrl: string | null;
   rankings: UniversityRankingRow[];
   programs: {
     id: string;
@@ -226,7 +227,7 @@ export async function getUniversityWithPrograms(universityId: string): Promise<U
   const supabase = await createClient();
   const { data: uni } = (await supabase
     .from("universities")
-    .select("id, name, city, website, university_type, description, photo_url, photo_attribution, countries(name)")
+    .select("id, name, city, website, university_type, description, photo_url, photo_attribution, photo_source_url, countries(name)")
     .eq("id", universityId)
     .maybeSingle()) as { data: any };
   if (!uni) return null;
@@ -253,6 +254,7 @@ export async function getUniversityWithPrograms(universityId: string): Promise<U
     description: uni.description,
     photoUrl: uni.photo_url,
     photoAttribution: uni.photo_attribution,
+    photoSourceUrl: uni.photo_source_url,
     countryName: (uni as any).countries?.name ?? "",
     rankings: (rankings ?? []).map((r: any) => ({
       type: r.ranking_type,
@@ -305,6 +307,7 @@ export interface UniversityProgramDetail {
     applicantCount: number | null;
     admittedCount: number | null;
     confidence: string;
+    level: "university" | "faculty" | "program";
     provenance: DataProvenance;
   }[];
   tuition: { year: number; currency: string; domesticAmount: number | null; internationalAmount: number | null; provenance: DataProvenance }[];
@@ -344,7 +347,7 @@ export async function getUniversityProgramDetail(universityProgramId: string): P
         .eq("university_program_id", universityProgramId),
       supabase
         .from("admission_statistics")
-        .select("year, acceptance_rate, international_acceptance_rate, applicant_count, admitted_count, confidence, last_verified_at, data_sources(name, url, reliability_tier)")
+        .select("year, acceptance_rate, international_acceptance_rate, applicant_count, admitted_count, confidence, level, last_verified_at, data_sources(name, url, reliability_tier)")
         .eq("university_program_id", universityProgramId)
         .order("year", { ascending: false }),
       supabase
@@ -394,6 +397,7 @@ export async function getUniversityProgramDetail(universityProgramId: string): P
       applicantCount: s.applicant_count,
       admittedCount: s.admitted_count,
       confidence: s.confidence,
+      level: s.level,
       provenance: toProvenance(s),
     })),
     tuition: (tuition ?? []).map((t: any) => ({

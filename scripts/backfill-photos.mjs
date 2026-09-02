@@ -125,13 +125,29 @@ async function main() {
         // Explicitly clear any bad photo (crest, unrelated snapshot) from a
         // previous run rather than leaving it in place -- no photo beats a
         // wrong one.
-        await supabase.from("universities").update({ photo_url: null, photo_attribution: null }).eq("id", u.id);
+        await supabase
+          .from("universities")
+          .update({
+            photo_url: null,
+            photo_attribution: null,
+            photo_source_type: null,
+            photo_source_url: null,
+            photo_last_verified_at: null,
+          })
+          .eq("id", u.id);
         skipped++;
         continue;
       }
+      const sourceUrl = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(result.filename).replace(/%20/g, "_")}`;
       const { error } = await supabase
         .from("universities")
-        .update({ photo_url: result.url, photo_attribution: `Wikimedia Commons: ${result.filename}` })
+        .update({
+          photo_url: result.url,
+          photo_attribution: `Wikimedia Commons: ${result.filename}`,
+          photo_source_type: "wikimedia_commons",
+          photo_source_url: sourceUrl,
+          photo_last_verified_at: new Date().toISOString().slice(0, 10),
+        })
         .eq("id", u.id);
       if (error) {
         console.error(`Failed to update ${u.name}:`, error.message);

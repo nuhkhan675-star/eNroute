@@ -110,7 +110,16 @@ export default async function UniversityDetailPage({
         </p>
       )}
       {university.photoAttribution && (
-        <p className="mt-2 text-xs text-muted-foreground">Photo: {university.photoAttribution}</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Photo:{" "}
+          {university.photoSourceUrl ? (
+            <a href={university.photoSourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
+              {university.photoAttribution}
+            </a>
+          ) : (
+            university.photoAttribution
+          )}
+        </p>
       )}
 
       <h2 className="mt-8 text-lg font-medium">Programs available</h2>
@@ -204,7 +213,12 @@ export default async function UniversityDetailPage({
                 : " -- closest program we have data for"}
               .
             </p>
-            <ProgramAnalysis bundle={bundle} universityName={university.name} photoUrl={university.photoUrl} />
+            <ProgramAnalysis
+              bundle={bundle}
+              universityName={university.name}
+              photoUrl={university.photoUrl}
+              factualRate={chosenProgramDetail?.admissionStatistics[0] ?? null}
+            />
             <div className="flex justify-center gap-3">
               <AnalyzeProgramButton universityProgramId={chosenProgram.id} hasExistingAnalysis />
               <Link

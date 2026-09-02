@@ -6,6 +6,7 @@ import { getDashboardMatches } from "@/lib/db/dashboard";
 import { AnalyzeProfileButton } from "@/components/dashboard/AnalyzeProfileButton";
 import { UniversityMatchCard } from "@/components/dashboard/UniversityMatchCard";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const GROUPS = [
@@ -36,7 +37,11 @@ export default async function DashboardPage() {
             {profile.fieldOfInterest ? ` · Interested in ${profile.fieldOfInterest.name}` : ""}
           </p>
         </div>
-        <AnalyzeProfileButton label={profile.profileStrength != null ? "Re-analyze Profile" : "Analyse Your Profile"} />
+        {profile.profileStrength != null ? (
+          <Button nativeButton={false} render={<Link href="/onboarding">Edit &amp; Re-analyse Profile</Link>} />
+        ) : (
+          <AnalyzeProfileButton label="Analyse Your Profile" />
+        )}
       </div>
 
       {profile.profileStrength != null && (

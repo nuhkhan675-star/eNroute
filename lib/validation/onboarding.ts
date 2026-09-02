@@ -8,6 +8,13 @@ export const subjectEntrySchema = z.object({
 });
 export type SubjectEntry = z.infer<typeof subjectEntrySchema>;
 
+export const grade10SubjectEntrySchema = z.object({
+  id: z.string(), // client-side draft id
+  subjectName: z.string().min(1, "Subject name is required"),
+  grade: z.string().min(1, "Grade is required"),
+});
+export type Grade10SubjectEntry = z.infer<typeof grade10SubjectEntrySchema>;
+
 export const extracurricularCategories = [
   "sports",
   "leadership",
@@ -71,6 +78,8 @@ export type ExamScoreEntry = z.infer<typeof examScoreEntrySchema>;
 export const onboardingDraftSchema = z.object({
   curriculumId: z.string().uuid().nullable(),
   subjects: z.array(subjectEntrySchema).default([]),
+  grade10Board: z.string().nullable(),
+  grade10Subjects: z.array(grade10SubjectEntrySchema).default([]),
   fieldOfInterestId: z.string().uuid().nullable(),
   extracurriculars: z.array(extracurricularEntrySchema).default([]),
   examScores: z.array(examScoreEntrySchema).default([]),
@@ -80,6 +89,7 @@ export type OnboardingDraft = z.infer<typeof onboardingDraftSchema>;
 export const ONBOARDING_STEPS = [
   "curriculum",
   "subjects",
+  "grade10",
   "fieldOfInterest",
   "extracurriculars",
   "examScores",

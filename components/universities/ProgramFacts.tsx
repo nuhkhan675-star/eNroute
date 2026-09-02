@@ -2,6 +2,12 @@ import type { UniversityProgramDetail, DataProvenance } from "@/lib/db/universit
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+const LEVEL_LABEL: Record<string, string> = {
+  university: "University-wide rate",
+  faculty: "Faculty-wide rate",
+  program: "Program-specific rate",
+};
+
 function ProvenanceLine({ provenance }: { provenance: DataProvenance }) {
   if (!provenance.sourceName && !provenance.dataYear) {
     return <p className="text-xs text-muted-foreground">Source not verified.</p>;
@@ -65,6 +71,12 @@ export function ProgramFacts({ detail }: { detail: UniversityProgramDetail }) {
                 {s.internationalAcceptanceRate != null ? ` (${s.internationalAcceptanceRate}% international)` : ""}
                 {" — "}
                 <span className="capitalize">{s.confidence} confidence</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <Badge variant="outline" className="mr-1 capitalize">
+                  {LEVEL_LABEL[s.level] ?? s.level}
+                </Badge>
+                this rate is not the same as your personal estimated likelihood below.
               </p>
               <ProvenanceLine provenance={s.provenance} />
             </div>

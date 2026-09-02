@@ -9,6 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FounderSection } from "@/components/home/FounderSection";
 
+const RETURNING_GREETINGS = [
+  (name: string) => `Welcome back, ${name}`,
+  (name: string) => `Good to see you again, ${name}`,
+  (name: string) => `Hey ${name}, let's take another look`,
+  (name: string) => `Glad you're here, ${name}`,
+  (name: string) => `${name}, ready for an update?`,
+];
+
+const FIRST_TIME_GREETINGS = [
+  (name: string) => `Welcome, ${name}`,
+  (name: string) => `Hey ${name}, let's get started`,
+  (name: string) => `Good to have you, ${name}`,
+  (name: string) => `${name}, let's build your profile`,
+];
+
+function randomGreeting(templates: ((name: string) => string)[], name: string): string {
+  return templates[Math.floor(Math.random() * templates.length)](name);
+}
+
 const PILLARS = [
   {
     icon: Database,
@@ -66,7 +85,7 @@ export default async function Home() {
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
             <div className="text-center">
               <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
-                Welcome back{firstName ? `, ${firstName}` : ""}
+                {firstName ? randomGreeting(RETURNING_GREETINGS, firstName) : "Welcome back"}
               </span>
               <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Your profile at a glance</h1>
               {profile.fieldOfInterest && (
@@ -118,7 +137,7 @@ export default async function Home() {
                 className="h-12 gap-2 px-8 text-base shadow-[0_0_30px_-6px_var(--primary)] transition-shadow hover:shadow-[0_0_45px_-4px_var(--primary)]"
                 nativeButton={false}
                 render={
-                  <Link href="/dashboard">
+                  <Link href="/onboarding">
                     Re-analyse your profile <ArrowRight className="size-4" />
                   </Link>
                 }
@@ -159,7 +178,7 @@ export default async function Home() {
         />
 
         <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
-          {firstName ? `Welcome, ${firstName}` : "AI-Powered University Admissions Advisor"}
+          {firstName ? randomGreeting(FIRST_TIME_GREETINGS, firstName) : "AI-Powered University Admissions Advisor"}
         </span>
 
         <h1 className="max-w-5xl text-6xl leading-[1.05] font-bold tracking-tight sm:text-7xl md:text-8xl">

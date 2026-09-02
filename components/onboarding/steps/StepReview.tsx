@@ -64,6 +64,20 @@ export function StepReview({ curricula, categories, onBack }: Props) {
         </div>
         <Separator />
         <div>
+          <p className="font-medium">
+            Grade 10 result {draft.grade10Board ? `(${draft.grade10Board})` : ""}
+          </p>
+          <ul className="text-muted-foreground">
+            {(draft.grade10Subjects ?? []).map((s) => (
+              <li key={s.id}>
+                {s.subjectName} — {s.grade}
+              </li>
+            ))}
+            {(draft.grade10Subjects ?? []).length === 0 && <li>—</li>}
+          </ul>
+        </div>
+        <Separator />
+        <div>
           <p className="font-medium">Field of interest</p>
           <p className="text-muted-foreground">{fieldOfInterest?.name ?? "—"}</p>
         </div>
