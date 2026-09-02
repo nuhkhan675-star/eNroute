@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Database, Brain, MessageCircle, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { getUserFullName } from "@/lib/db/users";
 import { getLatestAnalysis } from "@/lib/db/analyses";
 import type { AcademicAnalysis, ExtracurricularAnalysis } from "@/lib/ai/schemas";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   const profile = user ? await getProfileByUserId(user.id) : null;
+  const fullName = user ? await getUserFullName(user.id) : null;
+  const firstName = fullName?.split(" ")[0] ?? null;
   const primaryHref = user ? "/onboarding" : "/signup";
 
   let academic: AcademicAnalysis | null = null;
@@ -63,7 +66,7 @@ export default async function Home() {
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
             <div className="text-center">
               <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
-                Welcome back
+                Welcome back{firstName ? `, ${firstName}` : ""}
               </span>
               <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Your profile at a glance</h1>
               {profile.fieldOfInterest && (
@@ -156,7 +159,7 @@ export default async function Home() {
         />
 
         <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
-          AI-Powered University Admissions Advisor
+          {firstName ? `Welcome, ${firstName}` : "AI-Powered University Admissions Advisor"}
         </span>
 
         <h1 className="max-w-5xl text-6xl leading-[1.05] font-bold tracking-tight sm:text-7xl md:text-8xl">

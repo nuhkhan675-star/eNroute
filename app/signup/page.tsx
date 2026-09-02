@@ -27,12 +27,27 @@ export default function SignupPage() {
             className="flex flex-col gap-4"
           >
             <div className="flex flex-col gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" name="name" type="text" required autoComplete="name" />
+            </div>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" required autoComplete="email" />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
             </div>
             {result?.error && <p className="text-sm text-destructive">{result.error}</p>}
             {result?.message && <p className="text-sm text-muted-foreground">{result.message}</p>}

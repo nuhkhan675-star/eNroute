@@ -9,14 +9,24 @@ export interface AuthResult {
 }
 
 export async function signUpWithPassword(formData: FormData): Promise<AuthResult> {
+  const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+  if (!name) return { error: "Enter your name." };
   if (!email || password.length < 8) {
     return { error: "Enter a valid email and a password of at least 8 characters." };
   }
+  if (password !== confirmPassword) {
+    return { error: "Passwords don't match." };
+  }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: name } },
+  });
   if (error) return { error: error.message };
 
   if (data.session) {
