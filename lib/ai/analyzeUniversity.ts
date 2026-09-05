@@ -9,9 +9,15 @@ import {
 } from "@/lib/ai/prediction/scoringEngine";
 import type { FullStudentProfile } from "@/lib/db/profiles";
 import type { AcademicAnalysis, ExtracurricularAnalysis } from "@/lib/ai/schemas";
-import { findSourcedAcceptanceRate } from "@/lib/ai/sourcedAcceptanceRate";
-import { saveSourcedAcceptanceRate } from "@/lib/db/sourcedRates";
 
+// NOTE: the web-sourced acceptance-rate lookup (lib/ai/sourcedRateCore.ts) is
+// deliberately NOT called from here. Each lookup is two web-search requests
+// taking the better part of a minute, and this path runs for every university
+// in a student's queue -- wiring it in made the dashboard sit at "0 of 20" for
+// minutes. It belongs offline, in scripts/backfill-sourced-rates.mjs, whose
+// results land in university_admission_statistics and are then read from here
+// for free like any other real rate.
+//
 // Runs the university-specific half of the pipeline for a LIST of candidate
 // universities, batching several into each Gemini call
 // (runUniversityFitAnalystBatch) instead of one call per university -- the
@@ -69,32 +75,8 @@ export async function analyzeUniversities(params: {
         continue;
       }
 
-      // Before settling for an estimate, actually go and look for a real
-      // published rate for this specific school. Only for universities with
-      // neither a rate nor a ranking -- never re-researching the 754 US
-      // schools that already carry Scorecard data. A hit is stored globally
-      // (per university, not per student), so it is paid for once ever and
-      // every later student gets it for free.
-      let sourcedRate: number | null = null;
-      if (detail.admissionStatistics?.acceptanceRate == null && detail.globalRank == null) {
-        const sourced = await findSourcedAcceptanceRate(detail.name, detail.countryName);
-        if (sourced) {
-          try {
-            await saveSourcedAcceptanceRate(id, sourced);
-            sourcedRate = sourced.acceptanceRate;
-            console.log(
-              `[sourced-rate] ${detail.name}: ${sourced.acceptanceRate}% (${sourced.year}) <- ${sourced.sourceUrl}`
-            );
-          } catch (err) {
-            console.error(`[sourced-rate] failed to persist ${detail.name}`, err);
-          }
-        }
-      }
-
       const hasRealSignal =
-        detail.admissionStatistics?.acceptanceRate != null ||
-        detail.globalRank != null ||
-        sourcedRate != null;
+        detail.admissionStatistics?.acceptanceRate != null || detail.globalRank != null;
       // Only honour an estimate for universities we actually asked about.
       // If the model volunteered one for a school that already has real
       // data, drop it here rather than relying on getSelectivityTier's
@@ -103,9 +85,8 @@ export async function analyzeUniversities(params: {
       const aiEstimatedAcceptanceRate = hasRealSignal ? null : fit.estimated_acceptance_rate;
 
       const selectivity = getSelectivityTier({
-        acceptanceRate: detail.admissionStatistics?.acceptanceRate ?? sourcedRate,
-        acceptanceRateLevel:
-          detail.admissionStatistics || sourcedRate != null ? "university" : null,
+        acceptanceRate: detail.admissionStatistics?.acceptanceRate ?? null,
+        acceptanceRateLevel: detail.admissionStatistics ? "university" : null,
         globalRank: detail.globalRank,
         aiEstimatedAcceptanceRate,
       });
@@ -146,7 +127,6 @@ export async function analyzeUniversities(params: {
         // rank_proxy and unknown, which have no rate at all.
         selectivityRate:
           detail.admissionStatistics?.acceptanceRate ??
-          sourcedRate ??
           (selectivity.basis === "ai_estimate" ? aiEstimatedAcceptanceRate : null),
         academicScore: Math.round(academic.academic_score * 10),
         programFitScore: Math.round(fit.program_fit_score * 10),

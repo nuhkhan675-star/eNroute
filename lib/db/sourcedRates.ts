@@ -25,10 +25,10 @@ export async function saveSourcedAcceptanceRate(universityId: string, sourced: S
       .insert({
         name: sourced.sourceTitle.slice(0, 200),
         url: sourced.sourceUrl,
-        source_type: "web",
-        // Below an official bulk dataset like IPEDS, above anything derived:
-        // a real published page, located and verified per university.
-        reliability_tier: "secondary",
+        source_type: "other",
+        // data_sources constrains these: source_type in (official, government,
+        // aggregator, survey, other) and reliability_tier in (high, medium, low).
+        reliability_tier: "medium",
       })
       .select("id").single();
     if (error) throw error;

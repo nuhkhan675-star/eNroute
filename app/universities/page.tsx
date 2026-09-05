@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   searchUniversities,
-  getCountriesWithUniversityCounts,
   getUniversitiesByCountry,
   getUniversityCardExtras,
   getRelevantUniversities,
@@ -25,7 +24,7 @@ import { CompareBar } from "@/components/universities/CompareBar";
 import { UniversityGrid } from "@/components/universities/UniversityGrid";
 import { TargetUniversityAnalysis } from "@/components/universities/TargetUniversityAnalysis";
 import { DashboardMatchesQueue } from "@/components/dashboard/DashboardMatchesQueue";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const CLASSIFICATION_ORDER: Record<string, number> = { likely: 0, target: 1, reach: 2, high_reach: 3 };
 type SortKey = "name" | "ranking" | "tuition" | "likelihood";
@@ -155,7 +154,6 @@ export default async function UniversitiesPage({
     );
   }
 
-  const countries = await getCountriesWithUniversityCounts();
 
   const supabase = await createClient();
   const {
@@ -215,26 +213,6 @@ export default async function UniversitiesPage({
         </div>
       )}
 
-      <h2 className="mt-10 text-lg font-medium">Browse by country</h2>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-        {countries.map((c) => (
-          <Link key={c.id} href={`/universities?country=${c.id}`}>
-            <Card className="h-full overflow-hidden transition-colors hover:border-primary/40">
-              <CardContent className="flex items-center gap-4 py-6">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <GraduationCap className="size-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">{c.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {c.universityCount} universit{c.universityCount === 1 ? "y" : "ies"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }

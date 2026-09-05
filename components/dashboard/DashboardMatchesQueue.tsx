@@ -114,9 +114,6 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>{STATUS_MESSAGES[statusIndex]}</span>
-            <span className="shrink-0 tabular-nums">
-              {pending.length - pendingCount} of {pending.length} universities analysed
-            </span>
           </div>
           <Progress value={((pending.length - pendingCount) / Math.max(1, pending.length)) * 100} />
         </div>
