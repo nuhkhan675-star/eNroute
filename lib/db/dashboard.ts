@@ -12,6 +12,8 @@ export interface DashboardMatchCard {
   chanceMax: number;
   confidence: UniversityAnalysisRecord["confidence"];
   reasoning: string;
+  /** Drives the honest source label on the card -- see UniversityMatchCard. */
+  selectivityBasis: UniversityAnalysisRecord["selectivityBasis"];
   analyzedAt?: string;
 }
 
@@ -36,6 +38,7 @@ export async function getDashboardMatches(profileId: string): Promise<DashboardM
       chanceMax: r.chanceMax,
       confidence: r.confidence,
       reasoning: r.reasoning,
+      selectivityBasis: r.selectivityBasis,
       analyzedAt: r.analyzedAt,
     }))
     .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category]);

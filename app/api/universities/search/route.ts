@@ -6,11 +6,12 @@ import { searchUniversities } from "@/lib/db/universities";
 // itself is a separate, explicit POST to /api/analyze/[universityId].
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-  if (q.length < 2) return NextResponse.json({ results: [] });
+  // One character is enough: typing "f" should list the F universities.
+  if (q.length < 1) return NextResponse.json({ results: [] });
 
   const results = await searchUniversities(q);
   return NextResponse.json({
-    results: results.slice(0, 8).map((u) => ({
+    results: results.map((u) => ({
       id: u.id,
       name: u.name,
       city: u.city,

@@ -9,6 +9,8 @@ import {
 } from "@/lib/ai/prediction/scoringEngine";
 import type { FullStudentProfile } from "@/lib/db/profiles";
 import type { AcademicAnalysis, ExtracurricularAnalysis } from "@/lib/ai/schemas";
+import { findSourcedAcceptanceRate } from "@/lib/ai/sourcedAcceptanceRate";
+import { saveSourcedAcceptanceRate } from "@/lib/db/sourcedRates";
 
 // Runs the university-specific half of the pipeline for a LIST of candidate
 // universities, batching several into each Gemini call
@@ -45,6 +47,12 @@ export async function analyzeUniversities(params: {
         specialities: d.specialities,
         knownPrograms: d.programs.map((p) => p.displayName),
         requirements: d.requirements.map((r) => r.description),
+        // Eligibility for an AI estimate is decided HERE, from real data,
+        // before the model is called -- never by the model itself. Only a
+        // university with no published rate and no ranking is offered up,
+        // so an estimate can never displace a real signal.
+        needsAcceptanceRateEstimate:
+          d.admissionStatistics?.acceptanceRate == null && d.globalRank == null,
       };
     });
 
@@ -61,10 +69,45 @@ export async function analyzeUniversities(params: {
         continue;
       }
 
+      // Before settling for an estimate, actually go and look for a real
+      // published rate for this specific school. Only for universities with
+      // neither a rate nor a ranking -- never re-researching the 754 US
+      // schools that already carry Scorecard data. A hit is stored globally
+      // (per university, not per student), so it is paid for once ever and
+      // every later student gets it for free.
+      let sourcedRate: number | null = null;
+      if (detail.admissionStatistics?.acceptanceRate == null && detail.globalRank == null) {
+        const sourced = await findSourcedAcceptanceRate(detail.name, detail.countryName);
+        if (sourced) {
+          try {
+            await saveSourcedAcceptanceRate(id, sourced);
+            sourcedRate = sourced.acceptanceRate;
+            console.log(
+              `[sourced-rate] ${detail.name}: ${sourced.acceptanceRate}% (${sourced.year}) <- ${sourced.sourceUrl}`
+            );
+          } catch (err) {
+            console.error(`[sourced-rate] failed to persist ${detail.name}`, err);
+          }
+        }
+      }
+
+      const hasRealSignal =
+        detail.admissionStatistics?.acceptanceRate != null ||
+        detail.globalRank != null ||
+        sourcedRate != null;
+      // Only honour an estimate for universities we actually asked about.
+      // If the model volunteered one for a school that already has real
+      // data, drop it here rather than relying on getSelectivityTier's
+      // ordering alone -- two independent guards, since this is the rule
+      // that must never break.
+      const aiEstimatedAcceptanceRate = hasRealSignal ? null : fit.estimated_acceptance_rate;
+
       const selectivity = getSelectivityTier({
-        acceptanceRate: detail.admissionStatistics?.acceptanceRate ?? null,
-        acceptanceRateLevel: detail.admissionStatistics ? "university" : null,
+        acceptanceRate: detail.admissionStatistics?.acceptanceRate ?? sourcedRate,
+        acceptanceRateLevel:
+          detail.admissionStatistics || sourcedRate != null ? "university" : null,
         globalRank: detail.globalRank,
+        aiEstimatedAcceptanceRate,
       });
 
       const prediction = computeAdmissionPrediction(
@@ -96,8 +139,15 @@ export async function analyzeUniversities(params: {
         category: prediction.category,
         selectivityLevel: selectivity.tier,
         selectivityBasis: selectivity.basis,
-        // Only ever a real, sourced rate -- never a derived or invented one.
-        selectivityRate: detail.admissionStatistics?.acceptanceRate ?? null,
+        // The rate the tier was actually computed from. A real sourced rate
+        // when we have one; otherwise the model estimate, but ONLY when
+        // selectivityBasis says "ai_estimate", so the UI can never present
+        // an estimate as though it were published. Stays null for
+        // rank_proxy and unknown, which have no rate at all.
+        selectivityRate:
+          detail.admissionStatistics?.acceptanceRate ??
+          sourcedRate ??
+          (selectivity.basis === "ai_estimate" ? aiEstimatedAcceptanceRate : null),
         academicScore: Math.round(academic.academic_score * 10),
         programFitScore: Math.round(fit.program_fit_score * 10),
         extracurricularScore: Math.round(extracurricular.extracurricular_score * 10),

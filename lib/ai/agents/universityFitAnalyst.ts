@@ -15,6 +15,13 @@ export interface UniversityToAnalyze {
   knownPrograms: string[];
   /** Published score bands for admitted students, if we have them on record. */
   requirements: string[];
+  /**
+   * True only when this university has NEITHER a real published acceptance
+   * rate NOR a ranking -- i.e. it would otherwise land at "unknown"
+   * selectivity. Decided by the caller from real data, never by the model,
+   * so the model can never talk its way into overriding a real figure.
+   */
+  needsAcceptanceRateEstimate: boolean;
 }
 
 const SYSTEM_PROMPT = `You are the University Fit Analyst inside a university admissions advisory system.
@@ -50,8 +57,33 @@ lean on general subject/grade readiness and say so in "gaps" rather than inventi
 For "candidate_scholarships": leave this empty unless you were explicitly given real scholarship data
 for this university -- never invent one, its amount, or its criteria.
 
-Never state or estimate a university's acceptance rate. How selective a school is comes from real
-published data elsewhere in the system, never from you -- an invented rate has no source behind it.
+ACCEPTANCE RATES. Never state or imply an acceptance rate anywhere in your prose -- not in
+"reasoning", "strengths", "gaps", or any other text field. How selective a school is normally comes
+from real published data elsewhere in the system, never from you.
+
+The single exception is the "estimated_acceptance_rate" field, and ONLY for universities explicitly
+marked below as "NO SELECTIVITY DATA ON RECORD". For those, and only those, supply your best
+estimate of that university's overall undergraduate acceptance rate (0-100) from your general
+knowledge of the institution -- its reputation, country, type, size and competitiveness.
+
+Read this next part carefully, because getting it wrong is worse than useless:
+- If you do not genuinely recognise the university, or you would be guessing from its name alone,
+  return null. Null is a good answer and the CORRECT answer for an institution you do not actually
+  know. A wrong number is far more damaging than no number, because the system treats what you
+  return as a real signal.
+- Do not derive a rate from the name, from the country's general competitiveness, or from the fact
+  that the university appears in this list. Base it on actual knowledge of that specific
+  institution, or return null.
+- Do not anchor on a figure you remember for a similarly-named school.
+- In "estimated_acceptance_rate_basis", state in one short sentence what the estimate rests on
+  (e.g. "large public flagship, historically admits a substantial majority of applicants").
+  Return null there too whenever the rate is null.
+- For every university NOT marked "NO SELECTIVITY DATA ON RECORD", return null for both fields.
+  We already hold real data for those and your estimate would be discarded.
+
+You still never decide the student's admission probability or a Reach/Target/Likely label. The
+estimate above describes the SCHOOL, not the student; the deterministic engine decides what it
+means for this applicant.
 
 Frame every assessment constructively: identify genuine strengths first, phrase gaps as concrete,
 actionable areas rather than blunt criticism, and never inflate a score or invent a strength the
@@ -81,7 +113,9 @@ Known for (specialities): ${u.specialities.length > 0 ? u.specialities.join(", "
 Real programs on record: ${u.knownPrograms.length > 0 ? u.knownPrograms.join(", ") : "None recorded -- do not assume a specific program exists"}
 
 Admitted-student score bands (FACT, from our database):
-${u.requirements.length > 0 ? u.requirements.map((r) => `- ${r}`).join("\n") : "None recorded -- do not assume any specific score requirement exists."}`
+${u.requirements.length > 0 ? u.requirements.map((r) => `- ${r}`).join("\n") : "None recorded -- do not assume any specific score requirement exists."}
+
+Selectivity data on record: ${u.needsAcceptanceRateEstimate ? "NONE -- NO SELECTIVITY DATA ON RECORD. You may estimate estimated_acceptance_rate for this university, or return null if you do not genuinely know it." : "Yes, real data already held -- return null for estimated_acceptance_rate."}`
     )
     .join("\n\n");
 

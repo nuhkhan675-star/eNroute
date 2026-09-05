@@ -27,6 +27,22 @@ const CONFIDENCE_LABELS: Record<string, string> = {
   low: "Low confidence",
 };
 
+// Where this card's selectivity baseline came from. Only the two weakest
+// bases render a badge: a real published rate needs no caveat, and adding a
+// label to every card would make the honest warning on the weak ones easy to
+// tune out. "ai_estimate" is called out more explicitly than "rank_proxy"
+// because it has strictly less behind it -- no published figure at all.
+const BASIS_NOTICES: Partial<Record<DashboardMatchCard["selectivityBasis"], { text: string; style: string }>> = {
+  rank_proxy: {
+    text: "Selectivity from world ranking",
+    style: "text-muted-foreground",
+  },
+  ai_estimate: {
+    text: "AI-estimated selectivity — not from a published source",
+    style: "text-amber-400",
+  },
+};
+
 export function UniversityMatchCard({ card, initialSaved }: { card: DashboardMatchCard; initialSaved?: boolean }) {
   return (
     <div className="relative">
@@ -67,6 +83,11 @@ export function UniversityMatchCard({ card, initialSaved }: { card: DashboardMat
                 {CONFIDENCE_LABELS[card.confidence]}
               </span>
             </div>
+            {BASIS_NOTICES[card.selectivityBasis] && (
+              <p className={`text-xs ${BASIS_NOTICES[card.selectivityBasis]!.style}`}>
+                {BASIS_NOTICES[card.selectivityBasis]!.text}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Estimated by our admissions model. Not an official prediction or guarantee from the
               university.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandN } from "@/components/layout/Logo";
 import { Database, Brain, MessageCircle, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
@@ -182,8 +183,7 @@ export default async function Home() {
         </span>
 
         <h1 className="max-w-5xl text-6xl leading-[1.05] font-bold tracking-tight sm:text-7xl md:text-8xl">
-          e<span className="text-primary drop-shadow-[0_0_28px_color-mix(in_oklch,var(--primary),transparent_65%)]">N</span>
-          route
+          e<BrandN className="drop-shadow-[0_0_28px_color-mix(in_oklch,var(--primary),transparent_65%)]" />route
         </h1>
 
         <p className="max-w-xl text-2xl font-medium text-foreground sm:text-3xl">

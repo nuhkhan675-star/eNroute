@@ -98,6 +98,63 @@ function computeMidpoint(composite: number, tier: SelectivityTier): number {
   return floor + (ceiling - floor) * (composite / 100);
 }
 
+/**
+ * How strongly a profile is allowed to move a school's real admission odds.
+ * Applied in LOG-ODDS space, which is the standard way to shift a probability
+ * without it running off either end: an average applicant (composite 50) sits
+ * at the school's published rate, a stronger one is lifted, a weaker one
+ * pushed down, and the result can never exceed 100% or go negative no matter
+ * how extreme the profile.
+ *
+ * 1.2 is deliberately conservative. At Harvard's real 3.7%, a composite of 85
+ * lands near 8% rather than the 14% the old tier-band produced -- a strong
+ * applicant genuinely does beat the base rate at a hyper-selective school, but
+ * not by the 4x the coarse band implied.
+ */
+const LOG_ODDS_GAIN = 1.2;
+
+/**
+ * Midpoint anchored on the school's ACTUAL published acceptance rate.
+ *
+ * This exists because the tier-band path above quantises the rate into five
+ * buckets before the math ever sees it, and the tier is the only
+ * school-specific input -- so every school inside one bucket returned an
+ * identical percentage for a given student. Aurora (80.9%), Bowie (72.4%) and
+ * Angelo State (83%) all sit in "low" and all returned the same number, which
+ * made unrelated schools look like they had been individually analysed when
+ * the rate had in fact been discarded.
+ *
+ * Anchoring on the real rate keeps the whole point of the tier system -- a
+ * strong profile is still structurally capped at a selective school, because
+ * the shift is relative to that school's own odds -- while letting genuinely
+ * different schools produce genuinely different numbers.
+ */
+function midpointFromRealRate(composite: number, rate: number): number {
+  // Clamp away from the asymptotes so logit() stays finite for 0% / 100%.
+  const base = Math.min(0.995, Math.max(0.005, rate / 100));
+  const logit = Math.log(base / (1 - base));
+  const rawShift = LOG_ODDS_GAIN * ((composite - 50) / 50);
+
+  // Deliberately ASYMMETRIC, and this is a product decision, not a modelling
+  // nicety: over-estimating a student's chances is far more damaging than
+  // under-estimating them. A number that comes in a little low reads as
+  // conservative; one that comes in high and is wrong costs someone a
+  // safety application.
+  //
+  // So downward shifts apply at full strength, while upward shifts are damped
+  // -- and damped hardest exactly where the risk is worst, at the most
+  // selective schools. At Harvard's 3.7% a strong profile lands near 5%
+  // (~1.4x the base rate) rather than the 8% a symmetric shift gave, or the
+  // 14% the old tier band gave. At an 80%-admit school the damping is
+  // effectively 1.0 and nothing changes, because a lift there is genuinely
+  // earned and carries no such downside.
+  const upwardDamping = Math.min(1, 0.35 + base);
+  const shifted = logit + (rawShift > 0 ? rawShift * upwardDamping : rawShift);
+
+  const p = 1 / (1 + Math.exp(-shifted));
+  return Math.min(97, Math.max(0.5, p * 100));
+}
+
 // ---- Step 3: confidence -- how much do we trust the underlying data? ----
 export interface ConfidenceInput {
   selectivityBasis: SelectivityResult["basis"];
@@ -107,7 +164,20 @@ export interface ConfidenceInput {
 }
 
 function computeConfidence(input: ConfidenceInput): PredictionConfidence {
-  if (input.selectivityBasis === "unknown" || !input.hasCompleteProfile) return "low";
+  // "ai_estimate" is pinned to low alongside "unknown" -- deliberately, and
+  // this is the single most important line in reinstating it. If it fell
+  // through to the "moderate" default below, bringing the AI estimate back
+  // would have NARROWED the displayed range (+/-8 instead of +/-13), making a
+  // model's guess read as MORE certain than honestly admitting we have no
+  // data. A figure with no published source behind it must widen the band,
+  // never tighten it.
+  if (
+    input.selectivityBasis === "unknown" ||
+    input.selectivityBasis === "ai_estimate" ||
+    !input.hasCompleteProfile
+  ) {
+    return "low";
+  }
   const hasStrongSelectivityData =
     input.selectivityBasis === "acceptance_rate" && input.acceptanceRateLevel === "program";
   if (hasStrongSelectivityData && input.hasRequirementsOnRecord) return "high";
@@ -151,7 +221,13 @@ export function computeAdmissionPrediction(
   confidenceInput: Omit<ConfidenceInput, "selectivityBasis">
 ): AdmissionPrediction {
   const composite = computeCompositeScore(scores);
-  const midpoint = computeMidpoint(composite, selectivity.tier);
+  // Prefer the school's real published rate when we have one; fall back to the
+  // tier band only for rank_proxy / ai_estimate / unknown, where there is no
+  // real number to anchor to.
+  const midpoint =
+    selectivity.basis === "acceptance_rate" && selectivity.rate != null
+      ? midpointFromRealRate(composite, selectivity.rate)
+      : computeMidpoint(composite, selectivity.tier);
   const confidence = computeConfidence({ ...confidenceInput, selectivityBasis: selectivity.basis });
   const halfWidth = RANGE_HALF_WIDTH[confidence];
 

@@ -105,6 +105,28 @@ export function ProgramAnalysis({ analysis, factualRate }: Props) {
                     " University-level acceptance data was available, but program-specific admission data was not — treat your estimate as more directly relevant."}
                 </p>
               </>
+            ) : analysis.selectivityBasis === "ai_estimate" ? (
+              <>
+                {/* No published rate and no ranking existed for this school, so
+                    the selectivity baseline came from the model's general
+                    knowledge. That is a materially weaker footing than either
+                    real branch above, so it is stated outright rather than
+                    blended into the generic "no data" wording. */}
+                <p className="text-xs font-medium text-amber-400">
+                  AI-estimated selectivity &mdash; not from a published source
+                </p>
+                {analysis.selectivityRate != null && (
+                  <p className="mt-1 text-sm font-medium">
+                    ~{analysis.selectivityRate}% <span className="text-xs font-normal text-muted-foreground">(estimated, unverified)</span>
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  We hold no published acceptance rate and no world ranking for this university, so
+                  its selectivity was estimated by our AI from general knowledge of the institution.
+                  Treat it as a rough starting point, not a fact &mdash; it carries no source, and your
+                  estimate above is shown at low confidence with a deliberately wide range because of it.
+                </p>
+              </>
             ) : (
               <p className="text-xs text-muted-foreground">
                 No verified historical acceptance-rate data is available for this program yet, so your

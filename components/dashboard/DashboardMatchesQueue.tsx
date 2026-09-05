@@ -7,11 +7,14 @@ import { UniversityMatchCard } from "@/components/dashboard/UniversityMatchCard"
 import { Progress } from "@/components/ui/progress";
 import { PROGRAM_ANALYSIS_BATCH_SIZE } from "@/lib/ai/prediction/scoringEngine";
 
+// Ordered most-accessible first, so the feed reads Likely -> Target -> Reach
+// -> High Reach. buildShortlist() picks across every one of these tiers, so a
+// student sees the whole spectrum rather than 20 schools from one end of it.
 const GROUPS = [
-  { key: "high_reach" as const, title: "High Reach", description: "Very difficult admission even for highly competitive applicants." },
-  { key: "reach" as const, title: "Reach", description: "You're competitive, but admission remains highly uncertain." },
-  { key: "target" as const, title: "Target", description: "You appear reasonably competitive relative to the available evidence." },
   { key: "likely" as const, title: "Likely", description: "You appear substantially above the competitive threshold." },
+  { key: "target" as const, title: "Target", description: "You appear reasonably competitive relative to the available evidence." },
+  { key: "reach" as const, title: "Reach", description: "You're competitive, but admission remains highly uncertain." },
+  { key: "high_reach" as const, title: "High Reach", description: "Very difficult admission even for highly competitive applicants." },
 ];
 
 const STATUS_MESSAGES = [

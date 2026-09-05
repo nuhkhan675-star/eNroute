@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { UniversitySearchCombobox, type UniversitySuggestion } from "@/components/universities/UniversitySearchCombobox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { UniversityAnalysisRecord } from "@/lib/db/analyses";
@@ -17,13 +16,6 @@ const CATEGORY_STYLES: Record<string, string> = {
   likely: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40",
 };
 
-interface Suggestion {
-  id: string;
-  name: string;
-  city: string | null;
-  countryName: string;
-}
-
 // How the acceptance-rate line is worded depends entirely on where the
 // number came from -- a published rate is stated plainly, anything derived
 // is explicitly marked as our estimate, and "no data" says so rather than
@@ -35,66 +27,48 @@ function selectivityLine(analysis: UniversityAnalysisRecord): { text: string; is
       return { text: rate != null ? `Acceptance rate ${rate}%` : "Published acceptance rate on record", isEstimate: false };
     case "rank_proxy":
       return { text: "Selectivity estimated from world ranking (our estimate)", isEstimate: true };
+    case "ai_estimate":
+      // Deliberately the loudest label of the four. This figure has less
+      // behind it than a rank proxy -- no published rate, no ranking, just
+      // the model's general knowledge -- so it says so in plain words and
+      // never renders the bare number as though it were sourced.
+      return {
+        text:
+          rate != null
+            ? `AI-estimated acceptance rate ~${rate}% -- not from a published source`
+            : "AI-estimated selectivity -- not from a published source",
+        isEstimate: true,
+      };
     default:
       return { text: "No acceptance-rate data on record -- low-confidence estimate", isEstimate: true };
   }
 }
 
 export function TargetUniversityAnalysis() {
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<UniversityAnalysisRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const skipNextLookup = useRef(false);
 
-  useEffect(() => {
-    if (skipNextLookup.current) {
-      skipNextLookup.current = false;
-      return;
-    }
-    const term = query.trim();
-    const controller = new AbortController();
-    // All state updates happen inside the debounce callback, never
-    // synchronously in the effect body (which would cascade renders).
-    const timer = setTimeout(() => {
-      if (term.length < 2) {
-        setSuggestions([]);
-        return;
-      }
-      fetch(`/api/universities/search?q=${encodeURIComponent(term)}`, { signal: controller.signal })
-        .then((r) => r.json())
-        .then((d) => setSuggestions(d.results ?? []))
-        .catch(() => {});
-    }, 250);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
-
-  const analyze = async (universityId: string, name: string) => {
-    skipNextLookup.current = true;
-    setQuery(name);
-    setSuggestions([]);
+  // Only ever called with a real university the student picked from the
+  // dropdown, so there is no "guess the top match" path left to get wrong.
+  const analyze = async (u: UniversitySuggestion) => {
     setAnalyzing(true);
     setError(null);
+    // Clear any previous school's result up front. Leaving it mounted was why
+    // a failed lookup still rendered an unrelated university's card beneath
+    // the error message.
     setResult(null);
     try {
-      const res = await fetch(`/api/analyze/${universityId}`, { method: "POST" });
+      const res = await fetch(`/api/analyze/${u.id}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analysis failed");
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
+      setResult(null);
     } finally {
       setAnalyzing(false);
     }
-  };
-
-  const analyzeTopMatch = () => {
-    if (suggestions.length > 0) analyze(suggestions[0].id, suggestions[0].name);
-    else setError(`No university matching "${query.trim()}" is in our database yet.`);
   };
 
   const line = result ? selectivityLine(result) : null;
@@ -112,43 +86,10 @@ export function TargetUniversityAnalysis() {
           </p>
         </div>
 
-        <div className="relative flex gap-2">
-          <div className="flex-1">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  analyzeTopMatch();
-                }
-              }}
-              placeholder="e.g. Northumbria University"
-              disabled={analyzing}
-            />
-            {suggestions.length > 0 && (
-              <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-                {suggestions.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => analyze(s.id, s.name)}
-                      className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-accent"
-                    >
-                      <span className="text-sm">{s.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {[s.city, s.countryName].filter(Boolean).join(", ")}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <Button onClick={analyzeTopMatch} disabled={analyzing || query.trim().length < 2}>
-            {analyzing ? "Analyzing…" : "Analyze"}
-          </Button>
+        <div className="flex gap-2">
+          <UniversitySearchCombobox onSelect={analyze} disabled={analyzing} />
         </div>
+        {analyzing && <p className="text-sm text-muted-foreground">Analyzing…</p>}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

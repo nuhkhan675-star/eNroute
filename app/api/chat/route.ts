@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   ]);
 
   // Gemini interactions take a single input string/turn list rather than
-  // Anthropic-style role-tagged messages; fold history into the prompt.
+  // role-tagged messages; fold history into the prompt.
   const transcript = history
     .slice(-20)
     .map((m) => `${m.role === "assistant" ? "Advisor" : "Student"}: ${m.content}`)

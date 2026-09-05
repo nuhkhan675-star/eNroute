@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSelectivityTier, type SelectivityTier } from "@/lib/ai/prediction/selectivity";
 import { getCountries, type Country } from "@/lib/db/reference";
 
 export interface UniversitySearchResult {
@@ -10,16 +11,87 @@ export interface UniversitySearchResult {
   photoUrl: string | null;
 }
 
+const SEARCH_LIMIT = 25;
+
+// Escape LIKE wildcards so a literal % or _ in the query can't turn into a
+// pattern that matches everything.
+function escapeLike(q: string): string {
+  return q.replace(/[\%_]/g, (m) => "\\" + m);
+}
+
+/**
+ * Name lookup for the typeahead. Prefix matches come FIRST, then
+ * contains-matches, because that is what a student typing "f" expects -- a
+ * list of universities whose names begin with F, not every university with an
+ * "f" somewhere in the middle. Two queries rather than one because Postgres
+ * can't express that ordering through the PostgREST filter syntax, and this
+ * stays a plain indexed ilike either way -- no AI, no cost.
+ */
 export async function searchUniversities(query: string): Promise<UniversitySearchResult[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("universities")
-    .select("id, name, city, website, photo_url, countries(name)")
-    .ilike("name", `%${query}%`)
-    .order("name")
-    .limit(25);
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
+  const term = escapeLike(query);
+  const select =
+    "id, name, city, website, photo_url, acronym, countries(name), university_admission_statistics(acceptance_rate), university_rankings(ranking_type)";
+
+  // Pass 1: name prefix, plus ACRONYM prefix. Students type "nus" / "bits" /
+  // "hku" far more than the full legal name, and no ilike on `name` can ever
+  // match those -- the letters aren't contiguous in the string. The acronym
+  // column (see migration 20260906000001) is what makes short forms findable.
+  const { data: prefix, error: prefixError } = await supabase
+    .from("universities").select(select)
+    .or(`name.ilike.${term}%,acronym.ilike.${term}%`)
+    .order("name").limit(SEARCH_LIMIT);
+  if (prefixError) throw prefixError;
+
+  const rows = [...(prefix ?? [])];
+  // Only pay for the wider search when the prefix pass didn't fill the list.
+  if (rows.length < SEARCH_LIMIT) {
+    const { data: contains, error: containsError } = await supabase
+      .from("universities").select(select).ilike("name", `%${term}%`).order("name").limit(SEARCH_LIMIT);
+    if (containsError) throw containsError;
+    const seen = new Set(rows.map((r: any) => r.id));
+    for (const row of contains ?? []) {
+      if (rows.length >= SEARCH_LIMIT) break;
+      if (!seen.has((row as any).id)) rows.push(row);
+    }
+  }
+
+  // Rank by how well each row actually matches, not alphabetically. Without
+  // this, "hku" returned "The Hong Kong University of Science and Technology"
+  // above "The University of Hong Kong" purely because H sorts before T --
+  // the exact acronym hit has to win.
+  const q = query.trim().toLowerCase();
+  // A school we hold real selectivity data for is, in practice, one of the
+  // well-known ones -- nothing else in the catalogue has a published rate or a
+  // world ranking attached. That makes it a serviceable prominence signal, and
+  // without it a bare string match ranks "Newcastle University Singapore"
+  // above the actual NUS, and "Melbourne Institute of Technology" above MIT,
+  // since both share the acronym and happen to have shorter names.
+  const isProminent = (row: any) =>
+    (row.university_admission_statistics ?? []).some((r: any) => r.acceptance_rate != null) ||
+    (row.university_rankings ?? []).some((r: any) => r.ranking_type === "global");
+
+  const score = (row: any) => {
+    const name = String(row.name ?? "").toLowerCase();
+    const acronym = String(row.acronym ?? "").toLowerCase();
+    let base;
+    if (acronym && acronym === q) base = 0;             // exact short form: NUS, HKU
+    else if (name === q) base = 1;                      // exact full name
+    else if (name.startsWith(q)) base = 2;              // "flor" -> Florida ...
+    else if (acronym && acronym.startsWith(q)) base = 3; // "iit" -> IITB, IITD ...
+    else base = 4;                                      // matched somewhere inside
+    return base - (isProminent(row) ? 2.5 : 0);
+  };
+  rows.sort((a: any, b: any) => {
+    const d = score(a) - score(b);
+    if (d !== 0) return d;
+    // Then the plain "University of X" ahead of "University of X, Satellite".
+    const len = String(a.name).length - String(b.name).length;
+    if (len !== 0) return len;
+    return String(a.name).localeCompare(String(b.name));
+  });
+
+  return rows.map((row: any) => ({
     id: row.id,
     name: row.name,
     city: row.city,
@@ -161,6 +233,8 @@ export interface RelevantUniversity {
   matchesFieldOfInterest: boolean;
   /** Real published acceptance rate, if one is on record. Used to spread the shortlist from safer to more selective. */
   acceptanceRate: number | null;
+  /** Best global rank, so schools with no published rate can still be placed on the reach/likely spectrum. */
+  globalRank: number | null;
 }
 
 /**
@@ -213,6 +287,17 @@ export async function getRelevantUniversities(
     .select("university_id, acceptance_rate, year")
     .in("university_id", universityIds)
     .order("year", { ascending: false });
+
+  const { data: rankRows } = await supabase
+    .from("university_rankings")
+    .select("university_id, ranking_value, ranking_year")
+    .in("university_id", universityIds)
+    .eq("ranking_type", "global")
+    .order("ranking_year", { ascending: false });
+  const rankById = new Map<string, number | null>();
+  for (const r of rankRows ?? []) {
+    if (!rankById.has(r.university_id)) rankById.set(r.university_id, r.ranking_value);
+  }
   const rateById = new Map<string, number | null>();
   for (const r of rateRows ?? []) {
     if (!rateById.has(r.university_id)) rateById.set(r.university_id, r.acceptance_rate);
@@ -222,39 +307,81 @@ export async function getRelevantUniversities(
     universityId: id,
     matchesFieldOfInterest: matchedIds.has(id),
     acceptanceRate: rateById.get(id) ?? null,
+    globalRank: rankById.get(id) ?? null,
   }));
 }
 
 /**
- * The student's shortlist: universities in their target countries that match
- * their field of interest, ordered from the most accessible (highest
- * acceptance rate) down to the most selective, so the feed spans safety
- * through reach rather than being all long-shots or all sure things.
- * Universities with no acceptance rate on record sort last -- we can't place
- * them on that spectrum honestly, but they're still included so the list
- * fills up.
+ * The student's shortlist: ~20 universities SPANNING the full spectrum, from
+ * Likely down to the hardest reaches, returned in descending order of
+ * accessibility (most likely first).
+ *
+ * Why stratify instead of sorting: sorting on one key and slicing the top N
+ * structurally returns one END of the spectrum, never a spread. The previous
+ * version sorted by acceptance rate descending, which handed a US student 20
+ * open-admission schools (all ~99%) and a UK student 20 pure reaches -- in
+ * both cases the comment promised "safety through reach" and the code
+ * delivered neither.
+ *
+ * Tiers come from getSelectivityTier(), reused rather than reimplemented, so
+ * this can never drift from the prediction engine's own bands. Within each
+ * tier, field-of-interest matches rank first, then schools whose tier rests on
+ * real published data ahead of those resting on a rank proxy -- the first
+ * batch a student sees should be the most trustworthy data available.
  */
 export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST_SIZE): RelevantUniversity[] {
-  // Highest acceptance rate first, so a shortlist spans safety -> reach.
-  // No rate on record sorts last: we can't honestly place those on the
-  // spectrum, but they're still eligible.
-  const byAccessibility = (a: RelevantUniversity, b: RelevantUniversity) => {
-    if (a.acceptanceRate == null && b.acceptanceRate == null) return 0;
-    if (a.acceptanceRate == null) return 1;
-    if (b.acceptanceRate == null) return -1;
-    return b.acceptanceRate - a.acceptanceRate;
+  // Most accessible tier first, so the returned order runs Likely -> Reach.
+  const ORDER: SelectivityTier[] = ["low", "moderate", "high", "very_high", "extreme"];
+
+  const classified = relevant.map((r) => ({
+    row: r,
+    sel: getSelectivityTier({
+      acceptanceRate: r.acceptanceRate,
+      acceptanceRateLevel: r.acceptanceRate != null ? "university" : null,
+      globalRank: r.globalRank,
+    }),
+  }));
+
+  const rank = (a: typeof classified[number], b: typeof classified[number]) => {
+    if (a.row.matchesFieldOfInterest !== b.row.matchesFieldOfInterest) {
+      return a.row.matchesFieldOfInterest ? -1 : 1;
+    }
+    const weight = (basis: string) => (basis === "acceptance_rate" ? 0 : basis === "rank_proxy" ? 1 : 2);
+    const w = weight(a.sel.basis) - weight(b.sel.basis);
+    if (w !== 0) return w;
+    // Within a tier, more accessible first, keeping the descending feel.
+    return (b.row.acceptanceRate ?? -1) - (a.row.acceptanceRate ?? -1);
   };
 
-  // Field-matched universities rank first, but they rarely fill the list on
-  // their own -- only a small share of the catalog has programs/specialities
-  // recorded, so gating strictly on a match would return a handful of
-  // results (or none) for most students. Top up from the rest of their
-  // target countries instead of showing a near-empty shortlist.
-  const matched = relevant.filter((r) => r.matchesFieldOfInterest).sort(byAccessibility);
-  if (matched.length >= limit) return matched.slice(0, limit);
+  const buckets = new Map<SelectivityTier, typeof classified>();
+  for (const t of ORDER) buckets.set(t, []);
+  for (const c of classified) buckets.get(c.sel.tier)!.push(c);
+  for (const t of ORDER) buckets.get(t)!.sort(rank);
 
-  const rest = relevant.filter((r) => !r.matchesFieldOfInterest).sort(byAccessibility);
-  return [...matched, ...rest].slice(0, limit);
+  // Even quota per tier, then redistribute whatever thin tiers can't fill so
+  // the list still reaches `limit` rather than showing gaps.
+  const quota = Math.ceil(limit / ORDER.length);
+  const picked: typeof classified = [];
+  const cursor = new Map<SelectivityTier, number>(ORDER.map((t) => [t, 0]));
+  for (const t of ORDER) {
+    const bucket = buckets.get(t)!;
+    const take = bucket.slice(0, quota);
+    picked.push(...take);
+    cursor.set(t, take.length);
+  }
+  for (const t of ORDER) {
+    if (picked.length >= limit) break;
+    const bucket = buckets.get(t)!;
+    let i = cursor.get(t)!;
+    while (picked.length < limit && i < bucket.length) picked.push(bucket[i++]);
+    cursor.set(t, i);
+  }
+
+  // Emit in tier order: Likely -> ... -> hardest reach.
+  const byTier = new Map<SelectivityTier, typeof classified>();
+  for (const t of ORDER) byTier.set(t, []);
+  for (const p of picked.slice(0, limit)) byTier.get(p.sel.tier)!.push(p);
+  return ORDER.flatMap((t) => byTier.get(t)!.sort(rank)).map((c) => c.row);
 }
 
 export interface UniversityForAnalysis {

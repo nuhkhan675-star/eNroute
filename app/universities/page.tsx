@@ -192,8 +192,6 @@ export default async function UniversitiesPage({
         Search for a specific university, or browse your recommended matches below.
       </p>
 
-      <SearchForm defaultValue="" />
-
       {profile?.profileStrength != null && <TargetUniversityAnalysis />}
 
       {profile?.profileStrength == null ? (

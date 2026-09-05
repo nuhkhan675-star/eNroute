@@ -53,6 +53,19 @@ export const programFitAnalysisSchema = z.object({
   ),
   reasoning: z.string(),
   confidence: confidenceSchema,
+  // LAST-RESORT selectivity signal, and the only place the model is ever
+  // permitted to produce an acceptance rate. It is requested only for
+  // universities we hold no published rate AND no ranking for; for every
+  // other university the prompt tells the model to return null here, and
+  // getSelectivityTier() would ignore it regardless (real data is checked
+  // first). Nullable on purpose: "I do not know this school" is a valid,
+  // expected answer that leaves the basis at "unknown", which is far better
+  // than a confident-sounding invention. See migration 0006.
+  estimated_acceptance_rate: z.number().min(0).max(100).nullable(),
+  // What the estimate above is actually grounded in, in the model's own
+  // words -- stored for audit so a bad estimate can be traced rather than
+  // just appearing as a bare number. Null whenever the rate is null.
+  estimated_acceptance_rate_basis: z.string().nullable(),
 });
 export type ProgramFitAnalysis = z.infer<typeof programFitAnalysisSchema>;
 
