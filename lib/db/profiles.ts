@@ -25,7 +25,7 @@ export interface FullStudentProfile {
 }
 
 // Selects the full graph of a student's onboarding data in one round trip.
-// Used by the dashboard, the AI orchestrator, and the chat context builder --
+// Used by the dashboard and the AI orchestrator --
 // every consumer of "what does this student's profile look like" goes
 // through this one function so the shape can't drift between call sites.
 async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, row: any): Promise<FullStudentProfile> {

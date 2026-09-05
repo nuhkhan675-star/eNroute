@@ -27,6 +27,12 @@ export interface SelectivityInput {
    * number.
    */
   aiEstimatedAcceptanceRate?: number | null;
+  /**
+   * Used ONLY to pick the default tier when nothing else is known -- see
+   * UNKNOWN_TIER_BY_COUNTRY. Never consulted when a real rate or ranking
+   * exists, so it can never soften a school we have evidence for.
+   */
+  countryName?: string | null;
 }
 
 export interface SelectivityResult {
@@ -90,6 +96,33 @@ function tierFromAiEstimate(rate: number): SelectivityTier {
   return tier === "extreme" ? "very_high" : tier;
 }
 
+/**
+ * What "unknown" should default to, per country.
+ *
+ * A university that publishes no acceptance rate and appears in no world
+ * ranking is far more likely to be non-selective than moderately selective:
+ * the selective institutions are precisely the ones that get ranked and do
+ * publish figures. "moderate" is therefore a pessimistic default, and how
+ * pessimistic depends on the system.
+ *
+ * India is the clear case in this catalogue -- 1,094 of its 1,099 universities
+ * have neither a rate nor a ranking, and that long tail is dominated by state
+ * and private institutions that admit the large majority of applicants. Rating
+ * them as moderately selective overstates the difficulty of nearly every
+ * Indian university outside the handful of national institutes.
+ *
+ * This is one step more accessible, not a free pass: "low" still runs a real
+ * band (see TIER_BANDS), so a weak profile is still placed near the bottom of
+ * it. And because this is consulted only on the unknown branch, a school with
+ * a published rate or a ranking is completely unaffected.
+ */
+const UNKNOWN_TIER_BY_COUNTRY: Record<string, SelectivityTier> = {
+  India: "low",
+};
+
+/** Default when we know nothing at all and have no country-level prior. */
+const DEFAULT_UNKNOWN_TIER: SelectivityTier = "moderate";
+
 export function getSelectivityTier(input: SelectivityInput): SelectivityResult {
   // Priority order is the whole safety property of this function: real data
   // first, always. A model estimate can only ever fill a genuine vacuum.
@@ -102,8 +135,10 @@ export function getSelectivityTier(input: SelectivityInput): SelectivityResult {
   if (input.aiEstimatedAcceptanceRate != null) {
     return { tier: tierFromAiEstimate(input.aiEstimatedAcceptanceRate), basis: "ai_estimate", rate: input.aiEstimatedAcceptanceRate };
   }
-  // No signal at all -- default to a mid-range guess rather than assuming
-  // either extreme, and flag it as unknown so the confidence layer widens
-  // the output range accordingly.
-  return { tier: "moderate", basis: "unknown", rate: null };
+  // No signal at all -- fall back to the country's prior, flagged as unknown so
+  // the confidence layer still widens the output range accordingly.
+  const tier =
+    (input.countryName ? UNKNOWN_TIER_BY_COUNTRY[input.countryName] : undefined) ??
+    DEFAULT_UNKNOWN_TIER;
+  return { tier, basis: "unknown", rate: null };
 }

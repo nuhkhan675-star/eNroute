@@ -44,7 +44,7 @@ const PILLARS = [
   {
     icon: MessageCircle,
     title: "An advisor that knows your profile",
-    body: "Chat with an advisor that has your full profile and prior analyses in context — not a generic chatbot starting from zero.",
+    body: "Every estimate comes with the reasoning behind it — strengths, gaps, and what to do next, tied to that specific university rather than generic advice.",
   },
 ];
 

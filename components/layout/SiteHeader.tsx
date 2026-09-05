@@ -17,19 +17,19 @@ export async function SiteHeader() {
           <Logo className="h-10" />
         </Link>
         <nav className="flex items-center gap-6 text-sm">
-          <Link href="/universities" className="text-muted-foreground transition-colors hover:text-foreground">
-            Universities
-          </Link>
           {user ? (
             <>
+              <Link href="/universities" className="text-muted-foreground transition-colors hover:text-foreground">
+                Universities
+              </Link>
               <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">
                 Dashboard
               </Link>
               <Link href="/saved" className="text-muted-foreground transition-colors hover:text-foreground">
                 Saved Schools
               </Link>
-              <Link href="/chat" className="text-muted-foreground transition-colors hover:text-foreground">
-                Advisor Chat
+              <Link href="/application-info" className="text-muted-foreground transition-colors hover:text-foreground">
+                Application Info
               </Link>
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">

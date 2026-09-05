@@ -88,6 +88,7 @@ export async function analyzeUniversities(params: {
         acceptanceRate: detail.admissionStatistics?.acceptanceRate ?? null,
         acceptanceRateLevel: detail.admissionStatistics ? "university" : null,
         globalRank: detail.globalRank,
+        countryName: detail.countryName,
         aiEstimatedAcceptanceRate,
       });
 

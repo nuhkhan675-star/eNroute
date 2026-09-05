@@ -6,6 +6,7 @@ import { signUpWithPassword, type AuthResult } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SignupPage() {
@@ -18,7 +19,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle>Create your advisor account</CardTitle>
           <CardDescription>
-            We use this to save your profile, analyses, and chat history securely.
+            We use this to save your profile and analyses securely.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -49,6 +50,7 @@ export default function SignupPage() {
                 autoComplete="new-password"
               />
             </div>
+            <TurnstileWidget />
             {result?.error && <p className="text-sm text-destructive">{result.error}</p>}
             {result?.message && <p className="text-sm text-muted-foreground">{result.message}</p>}
             <Button type="submit" disabled={isPending}>

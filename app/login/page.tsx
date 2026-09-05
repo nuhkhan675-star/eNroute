@@ -6,6 +6,7 @@ import { signInWithPassword, signInWithMagicLink, type AuthResult } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
@@ -29,9 +30,18 @@ export default function LoginPage() {
               <Input id="email" name="email" type="email" required autoComplete="email" />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Input id="password" name="password" type="password" required autoComplete="current-password" />
             </div>
+            <TurnstileWidget />
             {result?.error && <p className="text-sm text-destructive">{result.error}</p>}
             {result?.message && <p className="text-sm text-muted-foreground">{result.message}</p>}
             <Button type="submit" disabled={isPending}>

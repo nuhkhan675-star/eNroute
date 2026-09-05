@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUniversityWithPrograms, getUniversitiesForAnalysis } from "@/lib/db/universities";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +12,7 @@ import { RankingBadge } from "@/components/universities/RankingBadge";
 import { CompareToggle } from "@/components/universities/CompareToggle";
 import { SaveToggle } from "@/components/universities/SaveToggle";
 import { isUniversitySaved } from "@/lib/db/saved";
-import { MessageCircle } from "lucide-react";
+import { } from "lucide-react";
 
 export default async function UniversityDetailPage({
   params,
@@ -153,12 +152,6 @@ export default async function UniversityDetailPage({
             <ProgramAnalysis analysis={analysis} factualRate={factualStats} />
             <div className="flex justify-center gap-3">
               <AnalyzeUniversityButton universityId={university.id} hasExistingAnalysis />
-              <Link
-                href={`/chat?university=${university.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm hover:border-primary/50 hover:bg-primary/10"
-              >
-                <MessageCircle className="size-4" /> Ask the advisor about this
-              </Link>
             </div>
           </div>
         ) : (

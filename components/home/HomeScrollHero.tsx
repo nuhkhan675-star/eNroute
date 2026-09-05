@@ -161,5 +161,5 @@ export function HomeScrollHero({
   primaryHref: string;
   greeting: string | null;
 }) {
-  return <ScrollHero scenes={buildScenes(primaryHref, greeting)} />;
+  return <ScrollHero scenes={buildScenes(primaryHref, greeting)} ambientNames={MARQUEE} />;
 }

@@ -333,14 +333,26 @@ export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST
   // Most accessible tier first, so the returned order runs Likely -> Reach.
   const ORDER: SelectivityTier[] = ["low", "moderate", "high", "very_high", "extreme"];
 
-  const classified = relevant.map((r) => ({
-    row: r,
-    sel: getSelectivityTier({
-      acceptanceRate: r.acceptanceRate,
-      acceptanceRateLevel: r.acceptanceRate != null ? "university" : null,
-      globalRank: r.globalRank,
-    }),
-  }));
+  const classified = relevant
+    .map((r) => ({
+      row: r,
+      sel: getSelectivityTier({
+        acceptanceRate: r.acceptanceRate,
+        acceptanceRateLevel: r.acceptanceRate != null ? "university" : null,
+        globalRank: r.globalRank,
+      }),
+    }))
+    // Only schools we hold real selectivity data for -- a published rate or a
+    // world ranking. A university with neither would be scored from a model
+    // estimate, and a recommendation the system cannot evidence does not
+    // belong in the set it puts forward unprompted. Those schools stay fully
+    // analysable on demand from search or their own page, where the estimate
+    // is labelled; they are simply not RECOMMENDED off the back of a guess.
+    //
+    // This can return fewer than `limit` for countries whose coverage is thin,
+    // which is the intended trade: a shorter list that is entirely evidenced
+    // beats a full one padded with guesses.
+    .filter((c) => c.sel.basis === "acceptance_rate" || c.sel.basis === "rank_proxy");
 
   const rank = (a: typeof classified[number], b: typeof classified[number]) => {
     if (a.row.matchesFieldOfInterest !== b.row.matchesFieldOfInterest) {

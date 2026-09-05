@@ -93,10 +93,18 @@ function lerp(x: number, inputs: number[], outputs: number[]): number {
   return outputs[outputs.length - 1];
 }
 
-export function ScrollHero({ scenes }: { scenes: Scene[] }) {
+export function ScrollHero({
+  scenes,
+  ambientNames = [],
+}: {
+  scenes: Scene[];
+  /** Real university names drifting behind the sequence -- atmosphere, not content. */
+  ambientNames?: string[];
+}) {
   const container = useRef<HTMLDivElement>(null);
   const sceneRefs = useRef<(HTMLDivElement | null)[]>([]);
   const glowRef = useRef<HTMLDivElement>(null);
+  const driftRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const schedule = buildSchedule(scenes);
@@ -130,6 +138,13 @@ export function ScrollHero({ scenes }: { scenes: Scene[] }) {
         node.style.transform = "translate3d(0, " + y.toFixed(2) + "px, 0)";
         // A faded-out scene must not swallow clicks meant for the visible one.
         node.style.pointerEvents = opacity > 0.9 ? "auto" : "none";
+      });
+
+      // Ambient columns drift at different rates, reading as depth behind the
+      // headlines rather than a flat backdrop.
+      driftRefs.current.forEach((node, i) => {
+        if (!node) return;
+        node.style.transform = "translate3d(0, " + (p * (i % 2 === 0 ? -110 : 70)).toFixed(1) + "px, 0)";
       });
 
       if (glowRef.current) {
@@ -173,8 +188,11 @@ export function ScrollHero({ scenes }: { scenes: Scene[] }) {
     };
   }, [scenes]);
 
+  // -mt-16 pulls the stage up behind the sticky 64px site header, so the
+  // sequence owns the full viewport instead of starting below the header and
+  // leaving an empty band above the wordmark.
   return (
-    <div ref={container} style={{ height: STAGE_VH + "vh" }} className="relative w-full">
+    <div ref={container} style={{ height: STAGE_VH + "vh" }} className="relative -mt-16 w-full">
       <div className="bg-background sticky top-0 h-screen w-full overflow-hidden">
         <div ref={glowRef} aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <div
@@ -185,6 +203,56 @@ export function ScrollHero({ scenes }: { scenes: Scene[] }) {
             }}
           />
         </div>
+        {/* Faint blueprint grid -- carried over from the original hero this
+            sequence replaced. Without it the stage reads as an empty field
+            rather than a designed surface. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.055]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+          }}
+        />
+
+        {/* Soft vertical light shafts, echoing the reference's banded backdrop. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--primary), transparent 94%) 18%, transparent 34%, transparent 62%, color-mix(in oklch, var(--primary), transparent 95%) 78%, transparent 96%)",
+          }}
+        />
+
+        {/* Real university names drifting at the edges: atmosphere that says
+            what this product is for, kept far below reading contrast so it
+            never competes with the headline. */}
+        {ambientNames.length > 0 && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden md:block">
+            {[0, 1].map((col) => (
+              <div
+                key={col}
+                ref={(node) => {
+                  driftRefs.current[col] = node;
+                }}
+                className={
+                  "text-foreground/[0.07] absolute top-[-12%] flex w-48 flex-col gap-9 text-[11px] leading-tight tracking-wide " +
+                  (col === 0 ? "left-8 text-left" : "right-8 text-right")
+                }
+              >
+                {ambientNames
+                  .filter((_: string, i: number) => i % 2 === col)
+                  .concat(ambientNames.filter((_: string, i: number) => i % 2 === col))
+                  .map((name, i) => (
+                    <span key={col + "-" + i}>{name}</span>
+                  ))}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"

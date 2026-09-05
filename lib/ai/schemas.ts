@@ -82,35 +82,3 @@ export const programFitBatchResponseSchema = z.object({
   analyses: z.array(programFitBatchItemSchema),
 });
 export type ProgramFitBatchItem = z.infer<typeof programFitBatchItemSchema>;
-
-export const proposeProfileUpdateSchema = z.object({
-  kind: z.enum(["extracurricular", "subject_grade"]),
-  summary: z.string(),
-  extracurricular: z
-    .object({
-      activityName: z.string(),
-      category: z.enum([
-        "sports",
-        "leadership",
-        "volunteering",
-        "entrepreneurship",
-        "research",
-        "internship",
-        "academic_competition",
-        "arts",
-        "music",
-        "technology",
-        "community_service",
-        "student_organization",
-        "work_experience",
-        "other",
-      ]),
-      role: z.string().optional(),
-      yearsInvolved: z.number().optional(),
-      description: z.string().optional(),
-      achievements: z.string().optional(),
-      impact: z.string().optional(),
-    })
-    .optional(),
-});
-export type ProposeProfileUpdate = z.infer<typeof proposeProfileUpdateSchema>;
