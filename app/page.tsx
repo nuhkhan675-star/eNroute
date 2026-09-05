@@ -88,7 +88,14 @@ export default async function Home() {
               <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
                 {firstName ? randomGreeting(RETURNING_GREETINGS, firstName) : "Welcome back"}
               </span>
-              <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Your profile at a glance</h1>
+              {/* The wordmark carries over to the signed-in homepage too, so the
+                  brand is present rather than only appearing to logged-out
+                  visitors. Sized well below the logged-out hero so it sits above
+                  "Your profile at a glance" without competing with it. */}
+              <p className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl">
+                e<BrandN className="drop-shadow-[0_0_20px_color-mix(in_oklch,var(--primary),transparent_70%)]" />route
+              </p>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Your profile at a glance</h1>
               {profile.fieldOfInterest && (
                 <p className="mt-2 text-muted-foreground">Interested in {profile.fieldOfInterest.name}</p>
               )}

@@ -34,6 +34,22 @@ export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5.6-luna";
 /** The model actually serving primary calls -- what gets logged and recorded. */
 export const AI_MODEL = AI_PROVIDER === "openai" ? OPENAI_MODEL : GEMINI_MODEL;
 
+/**
+ * The model used when the primary provider hits a quota wall. Only reachable
+ * when Gemini is primary -- if AI_PROVIDER is already "openai" there is
+ * nothing to fall back to.
+ *
+ * Unlike the Claude fallback this replaces, cost is not the concern here:
+ * Luna is cheap enough that this being a paid path barely matters. What
+ * matters is that Gemini's free tier exhausts under real load (observed
+ * mid-session, with every request failing until the daily quota reset), and
+ * a hard stop is worse than quietly continuing on a paid provider.
+ */
+export const FALLBACK_AI_MODEL = OPENAI_MODEL;
+
+/** Whether a fallback is actually available for the current configuration. */
+const fallbackAvailable = () => AI_PROVIDER === "gemini" && openai !== null;
+
 interface StructuredCallParams<T extends z.ZodTypeAny> {
   system: string;
   prompt: string;
@@ -80,7 +96,18 @@ const MAX_TOTAL_RETRY_WAIT_MS = 60_000;
 // A burst of analyst calls can exceed a per-minute quota. 429 responses
 // include a "retry in Ns" hint we honor directly instead of guessing a
 // backoff -- but only while the cumulative wait stays under the ceiling.
-export async function withRateLimitRetry<T>(fn: () => Promise<T>, maxRetries = 4): Promise<T> {
+export async function withRateLimitRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 4,
+  /**
+   * When a fallback provider is standing by there is no point sitting out
+   * Gemini's "retry in 50s" hints -- that was what made the previous
+   * fallback feel broken: an exhausted quota took minutes to surface while
+   * the user watched a spinner. Surface the 429 immediately instead and let
+   * the caller switch providers.
+   */
+  failFastOn429 = false
+): Promise<T> {
   let waitedMs = 0;
   for (let attempt = 0; ; attempt++) {
     try {
@@ -88,6 +115,7 @@ export async function withRateLimitRetry<T>(fn: () => Promise<T>, maxRetries = 4
     } catch (err) {
       const delayMs = getRetryDelayMs(err);
       if (delayMs === null || attempt >= maxRetries) throw err;
+      if (failFastOn429) throw err;
       // Retrying would push us past the budget -- surface the 429 now.
       if (waitedMs + delayMs > MAX_TOTAL_RETRY_WAIT_MS) throw err;
       waitedMs += delayMs;
@@ -120,8 +148,9 @@ async function runGeminiStructured<T extends z.ZodTypeAny>(params: StructuredCal
 
   const parameters = sanitizeSchemaForGemini(z.toJSONSchema(schema, { target: "draft-7" }));
 
-  const interaction = await withRateLimitRetry(() =>
-    ai.interactions.create({
+  const interaction = await withRateLimitRetry(
+    () =>
+      ai.interactions.create({
       model: AI_MODEL,
       input: prompt,
       system_instruction: system,
@@ -130,8 +159,10 @@ async function runGeminiStructured<T extends z.ZodTypeAny>(params: StructuredCal
         tool_choice: { allowed_tools: { mode: "any", tools: [toolName] } },
         max_output_tokens: maxTokens,
       },
-      stream: false,
-    })
+        stream: false,
+      }),
+    4,
+    fallbackAvailable()
   );
 
   const call = interaction.steps?.find(
@@ -203,13 +234,30 @@ async function runOpenAIStructured<T extends z.ZodTypeAny>(params: StructuredCal
 // returning. This is the mechanism that keeps agent output machine-reliable
 // structured JSON instead of free text the frontend has to parse.
 //
-// Gemini is the primary model (see AI_MODEL). If its quota is genuinely
-// exhausted -- a 429 that survives every retry in withRateLimitRetry, not a
-// transient blip -- and ANTHROPIC_API_KEY is configured, the exact same
-// call is retried once against Claude so a quota wall on one provider
-// doesn't stall the whole app.
+// Which provider actually serves the call is decided once, by AI_PROVIDER,
+// rather than by a runtime fallback. An earlier version made Gemini primary
+// and retried against a second provider on a surviving 429; that was removed
+// deliberately, because honouring the provider's own "retry in Ns" hints
+// before failing over meant an exhausted quota took minutes to surface as an
+// error while the user watched a spinner. Switching provider is now an
+// explicit config change, so a quota wall is visible rather than absorbed.
 export async function runStructuredAgent<T extends z.ZodTypeAny>(
   params: StructuredCallParams<T>
 ): Promise<z.infer<T>> {
-  return AI_PROVIDER === "openai" ? runOpenAIStructured(params) : runGeminiStructured(params);
+  if (AI_PROVIDER === "openai") return runOpenAIStructured(params);
+
+  try {
+    return await runGeminiStructured(params);
+  } catch (err) {
+    const statusCode =
+      (err as { statusCode?: number; status?: number })?.statusCode ??
+      (err as { status?: number })?.status;
+    if (statusCode === 429 && fallbackAvailable()) {
+      console.warn(
+        `Gemini quota exhausted -- falling back to GPT-5.6 Luna for "${params.toolName}"`
+      );
+      return runOpenAIStructured(params);
+    }
+    throw err;
+  }
 }
