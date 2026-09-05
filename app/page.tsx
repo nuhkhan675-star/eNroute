@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandN } from "@/components/layout/Logo";
+import { HomeScrollHero } from "@/components/home/HomeScrollHero";
 import { Database, Brain, MessageCircle, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
@@ -168,61 +169,13 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col overflow-x-hidden">
-      <section className="relative flex min-h-[92vh] w-full flex-col items-center justify-center gap-8 px-6 text-center">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-60"
-          style={{
-            background:
-              "radial-gradient(50% 45% at 50% 8%, color-mix(in oklch, var(--primary), transparent 84%), transparent)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 -z-20 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
-          }}
-        />
-
-        <span className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
-          {firstName ? randomGreeting(FIRST_TIME_GREETINGS, firstName) : "AI-Powered University Admissions Advisor"}
-        </span>
-
-        <h1 className="max-w-5xl text-6xl leading-[1.05] font-bold tracking-tight sm:text-7xl md:text-8xl">
-          e<BrandN className="drop-shadow-[0_0_28px_color-mix(in_oklch,var(--primary),transparent_65%)]" />route
-        </h1>
-
-        <p className="max-w-xl text-2xl font-medium text-foreground sm:text-3xl">
-          Know where you stand. Know where you fit.
-        </p>
-
-        <p className="max-w-2xl text-lg text-muted-foreground">
-          Build your academic and extracurricular profile once, and get university
-          recommendations grounded in real program data — with transparent,
-          confidence-rated admission estimates and a personal AI advisor to talk it through.
-        </p>
-
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <Button
-            size="lg"
-            className="h-12 gap-2 px-8 text-base shadow-[0_0_18px_-8px_var(--primary)] transition-shadow hover:shadow-[0_0_28px_-6px_var(--primary)]"
-            nativeButton={false}
-            render={
-              <Link href={primaryHref}>
-                Create your profile <ArrowRight className="size-4" />
-              </Link>
-            }
-          />
-          <Button
-            size="lg"
-            variant="outline"
-            className="h-12 border-border px-8 text-base hover:border-primary/50 hover:bg-primary/10"
-            nativeButton={false}
-            render={<Link href="/universities">Search a specific university</Link>}
-          />
-        </div>
-      </section>
+      {/* Scroll-scrubbed opening sequence: one pinned timeline the scrollbar
+          scrubs, replacing the previous static hero. Everything below it is
+          unchanged and resumes normal page flow. */}
+      <HomeScrollHero
+        primaryHref={primaryHref}
+        greeting={firstName ? randomGreeting(FIRST_TIME_GREETINGS, firstName) : null}
+      />
 
       <section className="relative w-full border-t border-border bg-gradient-to-b from-transparent to-primary/5 px-6 py-28">
         <div className="mx-auto grid w-full max-w-6xl gap-6 sm:grid-cols-3">
