@@ -9,10 +9,10 @@ export default async function ChatConversationPage({
   searchParams,
 }: {
   params: Promise<{ conversationId: string }>;
-  searchParams: Promise<{ program?: string }>;
+  searchParams: Promise<{ university?: string }>;
 }) {
   const { conversationId } = await params;
-  const { program } = await searchParams;
+  const { university } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -33,7 +33,7 @@ export default async function ChatConversationPage({
       <ChatWindow
         conversationId={conversationId}
         initialMessages={messages.map((m) => ({ id: m.id, role: m.role, content: m.content }))}
-        focusedUniversityProgramId={program}
+        focusedUniversityId={university}
       />
     </div>
   );

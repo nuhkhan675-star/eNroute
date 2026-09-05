@@ -4,8 +4,11 @@ export interface FullStudentProfile {
   id: string;
   userId: string;
   curriculum: { id: string; code: string; name: string } | null;
+  targetCountryIds: string[];
   grade10Board: string | null;
+  grade9Subjects: { subjectName: string; grade: string }[];
   grade10Subjects: { subjectName: string; grade: string }[];
+  grade11Subjects: { subjectName: string; grade: string }[];
   fieldOfInterest: { id: string; name: string; parentGroup: string } | null;
   subjects: { subjectName: string; level: string | null; grade: string; gradeScale: string }[];
   extracurriculars: {
@@ -26,19 +29,29 @@ export interface FullStudentProfile {
 // every consumer of "what does this student's profile look like" goes
 // through this one function so the shape can't drift between call sites.
 async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, row: any): Promise<FullStudentProfile> {
-  const [{ data: subjects }, { data: grade10Subjects }, { data: extracurriculars }, { data: examScores }] =
-    await Promise.all([
-      supabase
-        .from("student_subjects")
-        .select("level, grade, subjects(name, grade_scale)")
-        .eq("profile_id", row.id),
-      supabase.from("grade_10_subjects").select("subject_name, grade").eq("profile_id", row.id),
-      supabase
-        .from("extracurriculars")
-        .select("activity_name, category, role, years_involved, description, achievements, impact")
-        .eq("profile_id", row.id),
-      supabase.from("exam_scores").select("exam_type, score").eq("profile_id", row.id),
-    ]);
+  const [
+    { data: subjects },
+    { data: targetCountries },
+    { data: grade9Subjects },
+    { data: grade10Subjects },
+    { data: grade11Subjects },
+    { data: extracurriculars },
+    { data: examScores },
+  ] = await Promise.all([
+    supabase
+      .from("student_subjects")
+      .select("level, grade, subjects(name, grade_scale)")
+      .eq("profile_id", row.id),
+    supabase.from("student_target_countries").select("country_id").eq("profile_id", row.id),
+    supabase.from("grade_9_subjects").select("subject_name, grade").eq("profile_id", row.id),
+    supabase.from("grade_10_subjects").select("subject_name, grade").eq("profile_id", row.id),
+    supabase.from("grade_11_subjects").select("subject_name, grade").eq("profile_id", row.id),
+    supabase
+      .from("extracurriculars")
+      .select("activity_name, category, role, years_involved, description, achievements, impact")
+      .eq("profile_id", row.id),
+    supabase.from("exam_scores").select("exam_type, score").eq("profile_id", row.id),
+  ]);
 
   return {
     id: row.id,
@@ -46,8 +59,11 @@ async function mapProfileRow(supabase: Awaited<ReturnType<typeof createClient>>,
     curriculum: row.curricula
       ? { id: row.curricula.id, code: row.curricula.code, name: row.curricula.name }
       : null,
+    targetCountryIds: (targetCountries ?? []).map((c: any) => c.country_id),
     grade10Board: row.grade_10_board ?? null,
+    grade9Subjects: (grade9Subjects ?? []).map((s: any) => ({ subjectName: s.subject_name, grade: s.grade })),
     grade10Subjects: (grade10Subjects ?? []).map((s: any) => ({ subjectName: s.subject_name, grade: s.grade })),
+    grade11Subjects: (grade11Subjects ?? []).map((s: any) => ({ subjectName: s.subject_name, grade: s.grade })),
     fieldOfInterest: row.program_categories
       ? { id: row.program_categories.id, name: row.program_categories.name, parentGroup: row.program_categories.parent_group }
       : null,

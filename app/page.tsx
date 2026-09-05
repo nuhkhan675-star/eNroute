@@ -76,10 +76,10 @@ export default async function Home() {
       <div className="flex flex-1 flex-col overflow-x-hidden">
         <section className="relative w-full px-6 py-20">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-70"
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-60"
             style={{
               background:
-                "radial-gradient(50% 45% at 50% 8%, color-mix(in oklch, var(--primary), transparent 35%), transparent)",
+                "radial-gradient(50% 45% at 50% 8%, color-mix(in oklch, var(--primary), transparent 84%), transparent)",
             }}
           />
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -93,7 +93,7 @@ export default async function Home() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-card p-6">
+            <div className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <Progress value={profile.profileStrength * 10} className="flex-1" />
                 <span className="text-sm font-medium">{profile.profileStrength.toFixed(1)} / 10</span>
@@ -105,7 +105,7 @@ export default async function Home() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-card p-6">
+              <div className="rounded-2xl border border-border bg-card p-6">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-400">
                   <CheckCircle2 className="size-4" /> Why this rating -- strengths
                 </h2>
@@ -117,7 +117,7 @@ export default async function Home() {
                   ))}
                 </ul>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-card p-6">
+              <div className="rounded-2xl border border-border bg-card p-6">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-400">
                   <AlertCircle className="size-4" /> Why this rating -- areas to strengthen
                 </h2>
@@ -134,7 +134,7 @@ export default async function Home() {
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button
                 size="lg"
-                className="h-12 gap-2 px-8 text-base shadow-[0_0_30px_-6px_var(--primary)] transition-shadow hover:shadow-[0_0_45px_-4px_var(--primary)]"
+                className="h-12 gap-2 px-8 text-base shadow-[0_0_18px_-8px_var(--primary)] transition-shadow hover:shadow-[0_0_28px_-6px_var(--primary)]"
                 nativeButton={false}
                 render={
                   <Link href="/onboarding">
@@ -145,7 +145,7 @@ export default async function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 border-white/15 px-8 text-base hover:border-primary/50 hover:bg-primary/10"
+                className="h-12 border-border px-8 text-base hover:border-primary/50 hover:bg-primary/10"
                 nativeButton={false}
                 render={<Link href="/universities">Browse universities</Link>}
               />
@@ -162,10 +162,10 @@ export default async function Home() {
     <div className="flex flex-1 flex-col overflow-x-hidden">
       <section className="relative flex min-h-[92vh] w-full flex-col items-center justify-center gap-8 px-6 text-center">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-70"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-60"
           style={{
             background:
-              "radial-gradient(50% 45% at 50% 8%, color-mix(in oklch, var(--primary), transparent 35%), transparent)",
+              "radial-gradient(50% 45% at 50% 8%, color-mix(in oklch, var(--primary), transparent 84%), transparent)",
           }}
         />
         <div
@@ -182,11 +182,11 @@ export default async function Home() {
         </span>
 
         <h1 className="max-w-5xl text-6xl leading-[1.05] font-bold tracking-tight sm:text-7xl md:text-8xl">
-          e<span className="text-primary drop-shadow-[0_0_40px_color-mix(in_oklch,var(--primary),transparent_30%)]">N</span>
+          e<span className="text-primary drop-shadow-[0_0_28px_color-mix(in_oklch,var(--primary),transparent_65%)]">N</span>
           route
         </h1>
 
-        <p className="max-w-xl text-2xl font-medium text-foreground/90 sm:text-3xl">
+        <p className="max-w-xl text-2xl font-medium text-foreground sm:text-3xl">
           Know where you stand. Know where you fit.
         </p>
 
@@ -199,7 +199,7 @@ export default async function Home() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <Button
             size="lg"
-            className="h-12 gap-2 px-8 text-base shadow-[0_0_30px_-6px_var(--primary)] transition-shadow hover:shadow-[0_0_45px_-4px_var(--primary)]"
+            className="h-12 gap-2 px-8 text-base shadow-[0_0_18px_-8px_var(--primary)] transition-shadow hover:shadow-[0_0_28px_-6px_var(--primary)]"
             nativeButton={false}
             render={
               <Link href={primaryHref}>
@@ -210,19 +210,19 @@ export default async function Home() {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 border-white/15 px-8 text-base hover:border-primary/50 hover:bg-primary/10"
+            className="h-12 border-border px-8 text-base hover:border-primary/50 hover:bg-primary/10"
             nativeButton={false}
             render={<Link href="/universities">Search a specific university</Link>}
           />
         </div>
       </section>
 
-      <section className="relative w-full border-t border-white/10 bg-gradient-to-b from-transparent to-primary/5 px-6 py-28">
+      <section className="relative w-full border-t border-border bg-gradient-to-b from-transparent to-primary/5 px-6 py-28">
         <div className="mx-auto grid w-full max-w-6xl gap-6 sm:grid-cols-3">
           {PILLARS.map((p) => (
             <div
               key={p.title}
-              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-card p-8 transition-colors hover:border-primary/40"
+              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 transition-colors hover:border-primary/40"
             >
               <div className="pointer-events-none absolute -top-16 -right-16 size-40 rounded-full bg-primary/10 blur-3xl transition-opacity group-hover:opacity-100 opacity-0" />
               <p.icon className="size-8 text-primary" strokeWidth={1.75} />

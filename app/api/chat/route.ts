@@ -32,7 +32,7 @@ function sseEvent(data: unknown) {
 }
 
 export async function POST(request: NextRequest) {
-  const { conversationId, message, focusedUniversityProgramId } = await request.json();
+  const { conversationId, message, focusedUniversityId } = await request.json();
   if (!conversationId || !message) {
     return NextResponse.json({ error: "conversationId and message are required" }, { status: 400 });
   }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   await saveMessage(conversationId, "user", message);
 
   const [systemPrompt, history] = await Promise.all([
-    buildChatContext(profile, focusedUniversityProgramId ?? null),
+    buildChatContext(profile, focusedUniversityId ?? null),
     getMessages(conversationId),
   ]);
 

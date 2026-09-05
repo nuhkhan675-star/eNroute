@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export function AnalyzeProgramButton({
-  universityProgramId,
+export function AnalyzeUniversityButton({
+  universityId,
   hasExistingAnalysis = false,
 }: {
-  universityProgramId: string;
+  universityId: string;
   hasExistingAnalysis?: boolean;
 }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -20,7 +20,7 @@ export function AnalyzeProgramButton({
     setIsAnalyzing(true);
     setError(null);
     try {
-      const res = await fetch(`/api/analyze/${universityProgramId}`, { method: "POST" });
+      const res = await fetch(`/api/analyze/${universityId}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Analysis failed");
       router.refresh();

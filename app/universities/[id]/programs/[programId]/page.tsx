@@ -1,15 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getUniversityProgramDetail } from "@/lib/db/universities";
-import { getProfileByUserId } from "@/lib/db/profiles";
-import { getProgramAnalysisBundle } from "@/lib/db/analyses";
-import { ProgramFacts } from "@/components/universities/ProgramFacts";
-import { ProgramAnalysis } from "@/components/universities/ProgramAnalysis";
-import { AnalyzeProgramButton } from "@/components/universities/AnalyzeProgramButton";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowRight } from "lucide-react";
 
-export default async function ProgramAnalysisPage({
+export default async function ProgramDetailPage({
   params,
 }: {
   params: Promise<{ id: string; programId: string }>;
@@ -19,21 +14,13 @@ export default async function ProgramAnalysisPage({
   const detail = await getUniversityProgramDetail(programId);
   if (!detail) notFound();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const profile = user ? await getProfileByUserId(user.id) : null;
-  const bundle = profile ? await getProgramAnalysisBundle(profile.id, programId) : null;
-
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10">
+    <div className="mx-auto w-full max-w-6xl px-6 py-10">
       <UniversityPhoto
         photoUrl={detail.university.photoUrl}
         alt={detail.university.name}
-        className="mb-6 h-44 w-full rounded-2xl border border-white/10"
-        sizes="768px"
+        className="mb-6 h-56 w-full rounded-2xl border border-border"
+        sizes="1152px"
         iconClassName="size-12"
       />
 
@@ -44,54 +31,69 @@ export default async function ProgramAnalysisPage({
         {detail.durationYears ? ` · ${detail.durationYears} years` : ""}
       </p>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-3 text-lg font-medium">Program facts</h2>
-          <ProgramFacts detail={detail} />
-        </div>
+      {detail.overview && <p className="mt-4 max-w-2xl text-sm">{detail.overview}</p>}
 
-        <div>
-          <h2 className="mb-3 text-lg font-medium">Your chances</h2>
-          {!user ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                <a href="/login" className="underline">
-                  Log in
-                </a>{" "}
-                to see a personalized analysis for this program.
-              </CardContent>
-            </Card>
-          ) : !profile ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                Complete your{" "}
-                <a href="/onboarding" className="underline">
-                  profile
-                </a>{" "}
-                to see a personalized analysis.
-              </CardContent>
-            </Card>
-          ) : bundle ? (
-            <div className="flex flex-col gap-4">
-              <ProgramAnalysis
-                bundle={bundle}
-                universityName={detail.university.name}
-                photoUrl={detail.university.photoUrl}
-                factualRate={detail.admissionStatistics[0] ?? null}
-              />
-              <AnalyzeProgramButton universityProgramId={programId} hasExistingAnalysis />
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-4 py-8 text-center text-sm text-muted-foreground">
-                See an estimate of your admission chances, scholarship fit, and cost for this specific
-                program.
-                <AnalyzeProgramButton universityProgramId={programId} />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+      {detail.requirements.length > 0 && (
+        <>
+          <h2 className="mt-8 text-lg font-medium">Admission requirements on record</h2>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+            {detail.requirements.map((r, i) => (
+              <li key={i}>
+                {r.description}
+                {r.minGrade ? ` (min: ${r.minGrade})` : ""}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {detail.tuition.length > 0 && (
+        <>
+          <h2 className="mt-8 text-lg font-medium">Tuition</h2>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+            {detail.tuition.map((t, i) => (
+              <li key={i}>
+                {t.year}: {t.internationalAmount != null ? `${t.internationalAmount.toLocaleString()} ${t.currency} (international)` : "Data unavailable"}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {detail.scholarships.length > 0 && (
+        <>
+          <h2 className="mt-8 text-lg font-medium">Scholarships on record</h2>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+            {detail.scholarships.map((s, i) => (
+              <li key={i}>
+                {s.name} ({s.amountType}
+                {s.amount ? `, ${s.amount} ${s.currency ?? ""}` : ""})
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {detail.deadlines.length > 0 && (
+        <>
+          <h2 className="mt-8 text-lg font-medium">Deadlines</h2>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+            {detail.deadlines.map((d, i) => (
+              <li key={i}>
+                {d.deadlineType}
+                {d.applicantType ? ` (${d.applicantType})` : ""}: {d.date ?? "TBD"}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <Link
+        href={`/universities/${detail.university.id}`}
+        className="mt-8 inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-4"
+      >
+        See your admission chances at {detail.university.name} <ArrowRight className="size-4" />
+      </Link>
     </div>
   );
 }

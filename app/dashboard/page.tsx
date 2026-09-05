@@ -3,17 +3,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getDashboardMatches } from "@/lib/db/dashboard";
+import { getRelevantUniversities, buildShortlist } from "@/lib/db/universities";
+import { getSavedUniversities } from "@/lib/db/saved";
 import { AnalyzeProfileButton } from "@/components/dashboard/AnalyzeProfileButton";
-import { UniversityMatchCard } from "@/components/dashboard/UniversityMatchCard";
+import { DashboardMatchesQueue } from "@/components/dashboard/DashboardMatchesQueue";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const GROUPS = [
-  { key: "reach" as const, title: "Reach", description: "Below your typical competitive range for this class of program." },
-  { key: "target" as const, title: "Target", description: "Roughly matched to your current profile." },
-  { key: "likely" as const, title: "Likely", description: "Comfortably within your competitive range." },
-];
+import { Bookmark, Search, TrendingUp } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -25,7 +22,24 @@ export default async function DashboardPage() {
   const profile = await getProfileByUserId(user.id);
   if (!profile) redirect("/onboarding");
 
-  const matches = profile.profileStrength != null ? await getDashboardMatches(profile.id) : [];
+  const [matches, saved] = await Promise.all([
+    profile.profileStrength != null ? getDashboardMatches(profile.id) : Promise.resolve([]),
+    getSavedUniversities(profile.id),
+  ]);
+
+  // The student's shortlist: universities in their target countries matching
+  // their field of interest, spanning high-acceptance to highly-selective,
+  // capped at SHORTLIST_SIZE. The automatic analysis queue below works
+  // through whichever of these aren't analyzed yet, client-side at bounded
+  // concurrency, without blocking this page load. Anything outside the
+  // shortlist is still analyzable on demand from its own page or the search
+  // panel.
+  const pending =
+    profile.profileStrength != null && profile.fieldOfInterest
+      ? buildShortlist(await getRelevantUniversities(profile.fieldOfInterest.id, profile.targetCountryIds))
+          .filter((r) => !matches.some((m) => m.universityId === r.universityId))
+          .map((r) => r.universityId)
+      : [];
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -42,6 +56,34 @@ export default async function DashboardPage() {
         ) : (
           <AnalyzeProfileButton label="Analyse Your Profile" />
         )}
+      </div>
+
+      <div className="mt-6 grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="flex flex-col gap-1 py-4">
+            <TrendingUp className="size-4 text-primary" />
+            <span className="text-lg font-semibold">
+              {profile.profileStrength != null ? `${profile.profileStrength.toFixed(1)}/10` : "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">Profile strength</span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col gap-1 py-4">
+            <Search className="size-4 text-primary" />
+            <span className="text-lg font-semibold">{matches.length}</span>
+            <span className="text-xs text-muted-foreground">Matches found</span>
+          </CardContent>
+        </Card>
+        <Link href="/saved">
+          <Card className="h-full transition-colors hover:border-primary/40">
+            <CardContent className="flex flex-col gap-1 py-4">
+              <Bookmark className="size-4 text-primary" />
+              <span className="text-lg font-semibold">{saved.length}</span>
+              <span className="text-xs text-muted-foreground">Saved schools</span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {profile.profileStrength != null && (
@@ -73,29 +115,11 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="mt-8 flex flex-col gap-8">
-          {matches.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              You haven&apos;t checked your chances at any specific university yet. Browse universities
-              below and click &quot;Analyze My Chances&quot; on a program to see it appear here.
-            </p>
-          )}
-          {GROUPS.map((group) => {
-            const groupMatches = matches.filter((m) => m.classification === group.key);
-            if (groupMatches.length === 0) return null;
-            return (
-              <div key={group.key}>
-                <h2 className="text-lg font-medium">{group.title}</h2>
-                <p className="text-sm text-muted-foreground">{group.description}</p>
-                <div className="mt-3 flex flex-col gap-3">
-                  {groupMatches.map((m) => (
-                    <UniversityMatchCard key={m.universityProgramId} card={m} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <DashboardMatchesQueue
+          initialMatches={matches}
+          pending={pending}
+          savedUniversityIds={saved.map((s) => s.universityId)}
+        />
       )}
     </div>
   );

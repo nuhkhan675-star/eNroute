@@ -5,35 +5,29 @@ import {
   getCountriesWithUniversityCounts,
   getUniversitiesByCountry,
   getUniversityCardExtras,
-  getChosenProgramsForUniversities,
+  getRelevantUniversities,
+  buildShortlist,
   type UniversitySearchResult,
   type UniversityCardExtras,
 } from "@/lib/db/universities";
 import { getCountryById, getProgramCategories } from "@/lib/db/reference";
 import { createClient } from "@/lib/supabase/server";
-import { getProfileByUserId, type FullStudentProfile } from "@/lib/db/profiles";
-import { getCachedChanceEstimatesByUniversity, type CachedChanceEstimate } from "@/lib/db/analyses";
-import { ensureGeneralAnalyses } from "@/lib/ai/orchestrator";
-import { analyzeUniversityProgram } from "@/lib/ai/analyzeProgram";
-import { mapWithConcurrency } from "@/lib/utils/concurrency";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { getUniversityAnalysesByUniversity, type UniversityAnalysisRecord } from "@/lib/db/analyses";
+import { getDashboardMatches } from "@/lib/db/dashboard";
+import { getSavedUniversityIds } from "@/lib/db/saved";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
-import { RankingBadge } from "@/components/universities/RankingBadge";
 import { FilterSortForm } from "@/components/universities/FilterSortForm";
-import { CompareToggle } from "@/components/universities/CompareToggle";
 import { CompareBar } from "@/components/universities/CompareBar";
-import { ArrowLeft, GraduationCap, Award } from "lucide-react";
+import { UniversityGrid } from "@/components/universities/UniversityGrid";
+import { TargetUniversityAnalysis } from "@/components/universities/TargetUniversityAnalysis";
+import { DashboardMatchesQueue } from "@/components/dashboard/DashboardMatchesQueue";
+import { ArrowLeft, GraduationCap } from "lucide-react";
 
-const CLASSIFICATION_STYLES: Record<string, string> = {
-  reach: "bg-red-500/15 text-red-400 border border-red-500/30",
-  target: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-  likely: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
-};
-
-const CLASSIFICATION_ORDER: Record<string, number> = { likely: 0, target: 1, reach: 2 };
+const CLASSIFICATION_ORDER: Record<string, number> = { likely: 0, target: 1, reach: 2, high_reach: 3 };
 type SortKey = "name" | "ranking" | "tuition" | "likelihood";
 
 export default async function UniversitiesPage({
@@ -71,30 +65,56 @@ export default async function UniversitiesPage({
   if (country) {
     const [countryRow, categories] = await Promise.all([getCountryById(country), getProgramCategories()]);
     if (!countryRow) notFound();
-    const results = await getUniversitiesByCountry(country, category || undefined);
 
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     const profile = user ? await getProfileByUserId(user.id) : null;
-    const [initialEstimates, extras] = await Promise.all([
+
+    // Never filter the list by field of interest automatically -- our
+    // per-university program coverage is still thin (many schools only have
+    // 1-3 programs on record), so defaulting the *list* to "has a matching
+    // program" silently hid the other 47/50 universities in a country
+    // instead of just deprioritizing them. An explicit category pick in the
+    // URL still filters normally.
+    const results = await getUniversitiesByCountry(country, category || undefined);
+
+    const [initialEstimates, extras, savedIds] = await Promise.all([
       profile
-        ? getCachedChanceEstimatesByUniversity(profile.id)
-        : Promise.resolve({} as Record<string, CachedChanceEstimate>),
+        ? getUniversityAnalysesByUniversity(profile.id)
+        : Promise.resolve({} as Record<string, UniversityAnalysisRecord>),
       getUniversityCardExtras(results.map((u) => u.id)),
+      profile ? getSavedUniversityIds(profile.id) : Promise.resolve(new Set<string>()),
     ]);
 
-    // Auto-run chances for every card on this page that doesn't have one
-    // cached yet (only possible for universities with program data -- most
-    // don't have any yet, which naturally bounds the AI-call volume).
-    const estimates = profile
-      ? await autoAnalyzeMissingEstimates(profile, results, initialEstimates)
-      : initialEstimates;
+    // Every university is analyzable regardless of whether it has a program
+    // on record -- field of interest only decides which ones auto-queue for
+    // background analysis (avoids firing a Gemini call for all 50 schools in
+    // a country on page load; the rest are still one click away via
+    // "Analyze My Chances" on their own page). This is a plain DB read (no
+    // AI call), so the page can render every card immediately with
+    // whatever's cached and let the client fill in the rest progressively.
+    const relevant = profile
+      ? await getRelevantUniversities(profile.fieldOfInterest?.id ?? null, [country])
+      : [];
+    const matchedIds = new Set(relevant.filter((r) => r.matchesFieldOfInterest).map((r) => r.universityId));
+    const pendingAnalysis = results
+      .filter((u) => matchedIds.has(u.id) && !initialEstimates[u.id])
+      .map((u) => u.id);
 
     const sortKey: SortKey =
       sort === "ranking" || sort === "tuition" || sort === "likelihood" ? sort : "name";
-    const sorted = sortResults(results, extras, estimates, sortKey);
+    const sorted = sortResults(results, extras, initialEstimates, sortKey);
+
+    // Without an explicit sort, surface the universities that match the
+    // student's field of interest first -- closest to shortlisted's
+    // "best-fit first" feel -- without hiding the rest of the country's
+    // catalog to get there.
+    const display =
+      sortKey === "name" && profile?.fieldOfInterest
+        ? [...sorted].sort((a, b) => Number(matchedIds.has(b.id)) - Number(matchedIds.has(a.id)))
+        : sorted;
 
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -104,7 +124,9 @@ export default async function UniversitiesPage({
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">Universities in {countryRow.name}</h1>
         <p className="mt-1 text-muted-foreground">
           {results.length} universit{results.length === 1 ? "y" : "ies"} in our database.
-          {profile && " Your estimated chances show automatically on any card with program data."}
+          {profile?.fieldOfInterest && !category
+            ? ` Universities with a ${profile.fieldOfInterest.name} program on record are shown first, with your estimated chances.`
+            : profile && " Your estimated chances fill in automatically on any card with program data."}
         </p>
 
         <FilterSortForm
@@ -121,11 +143,13 @@ export default async function UniversitiesPage({
           </p>
         )}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((u) => (
-            <UniversityGridCard key={u.id} university={u} estimate={estimates[u.id]} extras={extras[u.id]} />
-          ))}
-        </div>
+        <UniversityGrid
+          universities={display}
+          initialEstimates={initialEstimates}
+          extras={extras}
+          pendingAnalysis={pendingAnalysis}
+          savedUniversityIds={[...savedIds]}
+        />
         <CompareBar />
       </div>
     );
@@ -133,16 +157,68 @@ export default async function UniversitiesPage({
 
   const countries = await getCountriesWithUniversityCounts();
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const profile = user ? await getProfileByUserId(user.id) : null;
+
+  // The unified "recommended for you" feed -- every university matching the
+  // student's field of interest across all their target countries,
+  // auto-analyzed progressively, the same data the dashboard shows. This is
+  // the landing view now (closest to shortlisted's "Find Matches" feed)
+  // instead of forcing a country pick before anything relevant appears; the
+  // country grid below stays as the manual "browse everything" option.
+  let matches: Awaited<ReturnType<typeof getDashboardMatches>> = [];
+  let pending: string[] = [];
+  let savedIds: string[] = [];
+  if (profile) {
+    savedIds = [...(await getSavedUniversityIds(profile.id))];
+    if (profile.profileStrength != null) {
+      matches = await getDashboardMatches(profile.id);
+      if (profile.fieldOfInterest) {
+        const relevant = await getRelevantUniversities(profile.fieldOfInterest.id, profile.targetCountryIds);
+        pending = buildShortlist(relevant)
+          .filter((r) => !matches.some((m) => m.universityId === r.universityId))
+          .map((r) => r.universityId);
+      }
+    }
+  }
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
+    <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Explore universities</h1>
       <p className="mt-1 text-muted-foreground">
-        Pick a country to browse its universities, or search for one by name.
+        Search for a specific university, or browse your recommended matches below.
       </p>
 
       <SearchForm defaultValue="" />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      {profile?.profileStrength != null && <TargetUniversityAnalysis />}
+
+      {profile?.profileStrength == null ? (
+        profile && (
+          <Card className="mt-8">
+            <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
+              Analyse your profile to see universities matched to your field of interest, ranked by
+              your chances, across every country you&apos;re targeting.
+              <Button nativeButton={false} render={<Link href="/dashboard">Go to your dashboard</Link>} />
+            </CardContent>
+          </Card>
+        )
+      ) : (
+        <div className="mt-8">
+          <h2 className="text-lg font-medium">Recommended for you</h2>
+          <p className="text-sm text-muted-foreground">
+            Matched to {profile?.fieldOfInterest?.name ?? "your field of interest"} across all your target
+            countries, ranked by fit.
+          </p>
+          <DashboardMatchesQueue initialMatches={matches} pending={pending} savedUniversityIds={savedIds} />
+        </div>
+      )}
+
+      <h2 className="mt-10 text-lg font-medium">Browse by country</h2>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
         {countries.map((c) => (
           <Link key={c.id} href={`/universities?country=${c.id}`}>
             <Card className="h-full overflow-hidden transition-colors hover:border-primary/40">
@@ -165,44 +241,10 @@ export default async function UniversitiesPage({
   );
 }
 
-// Analyzes every university-with-a-program in `results` that doesn't
-// already have a cached estimate, in parallel with bounded concurrency, then
-// returns the refreshed estimate map. Failures (rate limits, etc.) are
-// swallowed per-university -- that card just stays without an estimate
-// rather than breaking the whole page.
-async function autoAnalyzeMissingEstimates(
-  profile: FullStudentProfile,
-  results: UniversitySearchResult[],
-  estimates: Record<string, CachedChanceEstimate>
-): Promise<Record<string, CachedChanceEstimate>> {
-  const chosenPrograms = await getChosenProgramsForUniversities(
-    results.map((u) => u.id),
-    profile.fieldOfInterest?.id ?? null
-  );
-  const needsAnalysis = results.filter((u) => chosenPrograms[u.id] && !estimates[u.id]);
-  if (needsAnalysis.length === 0) return estimates;
-
-  const { academic, extracurricular } = await ensureGeneralAnalyses(profile);
-  await mapWithConcurrency(needsAnalysis, 2, async (u) => {
-    try {
-      await analyzeUniversityProgram({
-        profile,
-        academic,
-        extracurricular,
-        universityProgramId: chosenPrograms[u.id].id,
-      });
-    } catch (err) {
-      console.error(`Auto-analysis failed for ${u.name}:`, err instanceof Error ? err.message : err);
-    }
-  });
-
-  return getCachedChanceEstimatesByUniversity(profile.id);
-}
-
 function sortResults(
   results: UniversitySearchResult[],
   extras: Record<string, UniversityCardExtras>,
-  estimates: Record<string, CachedChanceEstimate>,
+  estimates: Record<string, UniversityAnalysisRecord>,
   sortKey: SortKey
 ): UniversitySearchResult[] {
   if (sortKey === "name") return results;
@@ -216,8 +258,8 @@ function sortResults(
     );
   } else if (sortKey === "likelihood") {
     arr.sort((a, b) => {
-      const oa = estimates[a.id] ? CLASSIFICATION_ORDER[estimates[a.id].classification] : 3;
-      const ob = estimates[b.id] ? CLASSIFICATION_ORDER[estimates[b.id].classification] : 3;
+      const oa = estimates[a.id] ? CLASSIFICATION_ORDER[estimates[a.id].category] : 4;
+      const ob = estimates[b.id] ? CLASSIFICATION_ORDER[estimates[b.id].category] : 4;
       return oa - ob;
     });
   }
@@ -255,63 +297,3 @@ function UniversityList({ results }: { results: UniversitySearchResult[] }) {
   );
 }
 
-function UniversityGridCard({
-  university,
-  estimate,
-  extras,
-}: {
-  university: UniversitySearchResult;
-  estimate?: CachedChanceEstimate;
-  extras?: UniversityCardExtras;
-}) {
-  return (
-    <div className="relative h-full">
-      <div className="absolute right-2 top-2 z-10">
-        <CompareToggle universityId={university.id} />
-      </div>
-      <Link href={`/universities/${university.id}`} className="block h-full">
-        <Card className="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/40">
-        <UniversityPhoto
-          photoUrl={university.photoUrl}
-          alt={university.name}
-          className="h-32 w-full"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          iconClassName="size-8"
-        />
-        <CardContent className="flex flex-1 flex-col gap-2 py-4">
-          <div>
-            <p className="line-clamp-2 font-medium leading-snug">{university.name}</p>
-            <p className="text-sm text-muted-foreground">{university.city ?? university.countryName}</p>
-          </div>
-
-          {extras?.ranking && <RankingBadge ranking={extras.ranking} />}
-
-          {estimate && (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground">{estimate.programName}</p>
-              <Badge className={`w-fit gap-1 capitalize ${CLASSIFICATION_STYLES[estimate.classification]}`}>
-                {estimate.classification} · {estimate.likelihoodRangeLabel}
-              </Badge>
-              <p className="text-xs text-muted-foreground">{estimate.confidence} confidence</p>
-              {estimate.whySnippet && <p className="text-xs text-muted-foreground">{estimate.whySnippet}</p>}
-            </div>
-          )}
-
-          <div className="mt-auto flex flex-col gap-1 pt-1 text-xs text-muted-foreground">
-            {extras?.cheapestTuitionAmount != null && (
-              <p>
-                From {extras.cheapestTuitionAmount.toLocaleString()} {extras.cheapestTuitionCurrency}/yr
-              </p>
-            )}
-            {extras?.hasScholarships && (
-              <p className="flex items-center gap-1 text-primary">
-                <Award className="size-3.5" /> Scholarships available
-              </p>
-            )}
-          </div>
-        </CardContent>
-        </Card>
-      </Link>
-    </div>
-  );
-}

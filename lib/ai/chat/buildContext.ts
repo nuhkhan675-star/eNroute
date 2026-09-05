@@ -1,6 +1,7 @@
 import type { FullStudentProfile } from "@/lib/db/profiles";
-import { getLatestAnalysis, getAllFinalStrategiesForProfile } from "@/lib/db/analyses";
-import { getUniversityProgramDetail } from "@/lib/db/universities";
+import { getLatestAnalysis, getUniversityAnalysis, getAllUniversityAnalysesForProfile } from "@/lib/db/analyses";
+import { getUniversityWithPrograms } from "@/lib/db/universities";
+import { CATEGORY_LABELS } from "@/lib/ai/prediction/scoringEngine";
 
 export const CHAT_SYSTEM_PROMPT_HEADER = `You are this student's personal university admissions advisor. You are
 NOT a generic chatbot -- you have their actual stored profile and actual university data below, and you
@@ -20,14 +21,14 @@ Rules:
 
 export async function buildChatContext(
   profile: FullStudentProfile,
-  focusedUniversityProgramId?: string | null
+  focusedUniversityId?: string | null
 ): Promise<string> {
-  const [academic, extracurricular, majorFit, allStrategies, focusedProgramDetail] = await Promise.all([
+  const [academic, extracurricular, focusedAnalysis, allAnalyses, focusedUniversity] = await Promise.all([
     getLatestAnalysis(profile.id, "academic"),
     getLatestAnalysis(profile.id, "extracurricular"),
-    focusedUniversityProgramId ? getLatestAnalysis(profile.id, "major_fit", focusedUniversityProgramId) : null,
-    getAllFinalStrategiesForProfile(profile.id),
-    focusedUniversityProgramId ? getUniversityProgramDetail(focusedUniversityProgramId) : null,
+    focusedUniversityId ? getUniversityAnalysis(profile.id, focusedUniversityId) : null,
+    getAllUniversityAnalysesForProfile(profile.id),
+    focusedUniversityId ? getUniversityWithPrograms(focusedUniversityId) : null,
   ]);
 
   const parts: string[] = [CHAT_SYSTEM_PROMPT_HEADER, "\n--- STUDENT PROFILE ---"];
@@ -56,52 +57,40 @@ export async function buildChatContext(
   if (academic) parts.push(`\n--- ACADEMIC ANALYSIS (INFERENCE) ---\n${JSON.stringify(academic.output)}`);
   if (extracurricular)
     parts.push(`\n--- EXTRACURRICULAR ANALYSIS (INFERENCE) ---\n${JSON.stringify(extracurricular.output)}`);
-  if (majorFit)
-    parts.push(`\n--- MAJOR FIT ANALYSIS FOR CURRENTLY VIEWED PROGRAM (INFERENCE) ---\n${JSON.stringify(majorFit.output)}`);
+  if (focusedAnalysis)
+    parts.push(
+      `\n--- ADMISSION ANALYSIS FOR CURRENTLY VIEWED UNIVERSITY (INFERENCE -- chance range and category are computed deterministically from selectivity data, never invented) ---\n${JSON.stringify(
+        {
+          chanceRange: `${focusedAnalysis.chanceMin}-${focusedAnalysis.chanceMax}%`,
+          category: CATEGORY_LABELS[focusedAnalysis.category],
+          selectivityLevel: focusedAnalysis.selectivityLevel,
+          confidence: focusedAnalysis.confidence,
+          strengths: focusedAnalysis.strengths,
+          gaps: focusedAnalysis.gaps,
+          reasoning: focusedAnalysis.reasoning,
+        }
+      )}`
+    );
 
-  if (focusedProgramDetail) {
-    parts.push(`\n--- CURRENTLY VIEWED PROGRAM FACTS (FACT, from our database) ---`);
+  if (focusedUniversity) {
+    parts.push(`\n--- CURRENTLY VIEWED UNIVERSITY FACTS (FACT, from our database) ---`);
+    parts.push(`${focusedUniversity.name} (${focusedUniversity.city ?? "city unknown"}, ${focusedUniversity.countryName})`);
     parts.push(
-      `${focusedProgramDetail.university.name} -- ${focusedProgramDetail.displayName} (${focusedProgramDetail.degreeLevel})`
+      `Known specialities: ${focusedUniversity.specialities.join(", ") || "None recorded"}`
     );
     parts.push(
-      `Requirements: ${
-        focusedProgramDetail.requirements
-          .map((r) => `${r.description}${r.minGrade ? ` (min: ${r.minGrade})` : ""}`)
-          .join("; ") || "None recorded"
-      }`
-    );
-    parts.push(
-      `Tuition: ${
-        focusedProgramDetail.tuition
-          .map((t) => `${t.year}: ${t.internationalAmount ?? "unavailable"} ${t.currency} (international)`)
-          .join("; ") || "None recorded"
-      }`
-    );
-    parts.push(
-      `Scholarships: ${
-        focusedProgramDetail.scholarships
-          .map((s) => `${s.name} (${s.amountType}${s.amount ? `, ${s.amount} ${s.currency ?? ""}` : ""})`)
-          .join("; ") || "None recorded"
-      }`
-    );
-    parts.push(
-      `Deadlines: ${
-        focusedProgramDetail.deadlines
-          .map((d) => `${d.deadlineType}${d.applicantType ? ` (${d.applicantType})` : ""}: ${d.date ?? "TBD"}`)
-          .join("; ") || "None recorded"
+      `Real programs on record: ${
+        focusedUniversity.programs.map((p) => `${p.displayName} (${p.categoryName})`).join("; ") || "None recorded"
       }`
     );
   }
 
-  if (allStrategies.length > 0) {
+  if (allAnalyses.length > 0) {
     parts.push("\n--- UNIVERSITY-SPECIFIC ANALYSES ALREADY COMPUTED ---");
-    for (const row of allStrategies) {
-      const isFocused = focusedUniversityProgramId && row.university_program_id === focusedUniversityProgramId;
+    for (const a of allAnalyses) {
+      const isFocused = focusedUniversityId && a.universityId === focusedUniversityId;
       parts.push(
-        `${isFocused ? "[CURRENTLY VIEWING] " : ""}university_program_id=${row.university_program_id}: ${JSON.stringify(
-          { input: row.input_snapshot, output: row.output }
-        )}`
+        `${isFocused ? "[CURRENTLY VIEWING] " : ""}${a.universityName}: ${a.chanceMin}-${a.chanceMax}% (${CATEGORY_LABELS[a.category]}, ${a.selectivityLevel} selectivity, ${a.confidence} confidence)`
       );
     }
   }

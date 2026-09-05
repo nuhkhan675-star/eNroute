@@ -5,10 +5,14 @@ import { Progress } from "@/components/ui/progress";
 import { ONBOARDING_STEPS, type OnboardingDraft, type OnboardingStep } from "@/lib/validation/onboarding";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import type { Curriculum, ProgramCategory } from "@/lib/db/reference";
+import type { Country } from "@/lib/db/reference";
+import type { ProfileVersion } from "@/lib/db/onboarding";
 import { StepCurriculum } from "./steps/StepCurriculum";
 import { StepSubjects } from "./steps/StepSubjects";
-import { StepGrade10 } from "./steps/StepGrade10";
+import { StepTargetCountries } from "./steps/StepTargetCountries";
+import { StepSecondaryGrades } from "./steps/StepSecondaryGrades";
 import { StepFieldOfInterest } from "./steps/StepFieldOfInterest";
+import { StepPreferences } from "./steps/StepPreferences";
 import { StepExtracurriculars } from "./steps/StepExtracurriculars";
 import { StepExamScores } from "./steps/StepExamScores";
 import { StepReview } from "./steps/StepReview";
@@ -16,8 +20,10 @@ import { StepReview } from "./steps/StepReview";
 const STEP_LABELS: Record<OnboardingStep, string> = {
   curriculum: "Curriculum",
   subjects: "Subjects & Grades",
-  grade10: "Grade 10 Result",
+  targetCountries: "Target Countries",
+  secondaryGrades: "Secondary Grades",
   fieldOfInterest: "Field of Interest",
+  preferences: "Preferences",
   extracurriculars: "Extracurriculars",
   examScores: "Test Scores",
   review: "Review & Analyze",
@@ -26,10 +32,12 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
 interface Props {
   curricula: Curriculum[];
   categories: ProgramCategory[];
+  countries: Country[];
   existingDraft: OnboardingDraft | null;
+  profileVersions: ProfileVersion[];
 }
 
-export function OnboardingWizard({ curricula, categories, existingDraft }: Props) {
+export function OnboardingWizard({ curricula, categories, countries, existingDraft, profileVersions }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const step = ONBOARDING_STEPS[stepIndex];
   const hydrateIfEmpty = useOnboardingStore((s) => s.hydrateIfEmpty);
@@ -58,13 +66,27 @@ export function OnboardingWizard({ curricula, categories, existingDraft }: Props
 
       {step === "curriculum" && <StepCurriculum curricula={curricula} onNext={goNext} />}
       {step === "subjects" && <StepSubjects curricula={curricula} onNext={goNext} onBack={goBack} />}
-      {step === "grade10" && <StepGrade10 onNext={goNext} onBack={goBack} />}
+      {step === "targetCountries" && (
+        <StepTargetCountries countries={countries} onNext={goNext} onBack={goBack} />
+      )}
+      {step === "secondaryGrades" && (
+        <StepSecondaryGrades countries={countries} onNext={goNext} onBack={goBack} />
+      )}
       {step === "fieldOfInterest" && (
         <StepFieldOfInterest categories={categories} onNext={goNext} onBack={goBack} />
       )}
+      {step === "preferences" && <StepPreferences onNext={goNext} onBack={goBack} />}
       {step === "extracurriculars" && <StepExtracurriculars onNext={goNext} onBack={goBack} />}
-      {step === "examScores" && <StepExamScores onNext={goNext} onBack={goBack} />}
-      {step === "review" && <StepReview curricula={curricula} categories={categories} onBack={goBack} />}
+      {step === "examScores" && <StepExamScores countries={countries} onNext={goNext} onBack={goBack} />}
+      {step === "review" && (
+        <StepReview
+          curricula={curricula}
+          categories={categories}
+          countries={countries}
+          profileVersions={profileVersions}
+          onBack={goBack}
+        />
+      )}
     </div>
   );
 }

@@ -155,42 +155,188 @@ export async function getUniversityCardExtras(universityIds: string[]): Promise<
   return result;
 }
 
-export interface ChosenProgram {
-  id: string;
-  displayName: string;
-  categoryId: string | null;
+export interface RelevantUniversity {
+  universityId: string;
+  /** True if this university has a known program or speciality in the student's field of interest -- a sort/priority signal, never a gate on whether it's analyzable. */
+  matchesFieldOfInterest: boolean;
+  /** Real published acceptance rate, if one is on record. Used to spread the shortlist from safer to more selective. */
+  acceptanceRate: number | null;
 }
 
-// Batched (not per-university) lookup of "which program would we analyze
-// for this university" -- the one matching the student's field of interest,
-// else the first program on record. Used to auto-run chance analysis across
-// a whole country listing without an N+1 query per card.
-export async function getChosenProgramsForUniversities(
-  universityIds: string[],
-  fieldOfInterestId: string | null
-): Promise<Record<string, ChosenProgram>> {
-  if (universityIds.length === 0) return {};
+/**
+ * How many universities the dashboard/landing feed auto-analyzes for a
+ * student. Capped deliberately: auto-scoring the entire catalog would be
+ * hundreds of Gemini calls per student for results most never scroll to.
+ * Anything outside the shortlist is still fully analyzable on demand via the
+ * search panel or the university's own page.
+ */
+export const SHORTLIST_SIZE = 20;
+
+// Every university in the student's target countries (or all 6 supported
+// countries if none picked) is eligible for a chance estimate -- a missing
+// program or speciality on record never blocks analysis. fieldOfInterestId
+// only decides which ones get flagged for priority display/sorting.
+export async function getRelevantUniversities(
+  fieldOfInterestId: string | null,
+  countryIds?: string[]
+): Promise<RelevantUniversity[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("university_programs")
-    .select("id, university_id, display_name, programs(category_id)")
-    .in("university_id", universityIds)
-    .order("display_name");
+  let query = supabase.from("universities").select("id, country_id");
+  if (countryIds && countryIds.length > 0) {
+    query = query.in("country_id", countryIds);
+  }
+  const { data: unis, error } = await query;
   if (error) throw error;
+  const universityIds = (unis ?? []).map((u) => u.id);
+  if (universityIds.length === 0) return [];
 
-  const byUniversity = new Map<string, { id: string; displayName: string; categoryId: string | null }[]>();
-  for (const row of (data ?? []) as any[]) {
-    const list = byUniversity.get(row.university_id) ?? [];
-    list.push({ id: row.id, displayName: row.display_name, categoryId: row.programs?.category_id ?? null });
-    byUniversity.set(row.university_id, list);
+  const matchedIds = new Set<string>();
+  if (fieldOfInterestId) {
+    const [{ data: specialityRows }, { data: programRows }] = await Promise.all([
+      supabase
+        .from("university_specialities")
+        .select("university_id")
+        .in("university_id", universityIds)
+        .eq("category_id", fieldOfInterestId),
+      supabase
+        .from("university_programs")
+        .select("university_id, programs!inner(category_id)")
+        .in("university_id", universityIds)
+        .eq("programs.category_id", fieldOfInterestId),
+    ]);
+    for (const r of specialityRows ?? []) matchedIds.add(r.university_id);
+    for (const r of (programRows ?? []) as any[]) matchedIds.add(r.university_id);
   }
 
-  const result: Record<string, ChosenProgram> = {};
-  for (const [universityId, programs] of byUniversity) {
-    const chosen = programs.find((p) => p.categoryId === fieldOfInterestId) ?? programs[0];
-    if (chosen) result[universityId] = chosen;
+  const { data: rateRows } = await supabase
+    .from("university_admission_statistics")
+    .select("university_id, acceptance_rate, year")
+    .in("university_id", universityIds)
+    .order("year", { ascending: false });
+  const rateById = new Map<string, number | null>();
+  for (const r of rateRows ?? []) {
+    if (!rateById.has(r.university_id)) rateById.set(r.university_id, r.acceptance_rate);
   }
-  return result;
+
+  return universityIds.map((id) => ({
+    universityId: id,
+    matchesFieldOfInterest: matchedIds.has(id),
+    acceptanceRate: rateById.get(id) ?? null,
+  }));
+}
+
+/**
+ * The student's shortlist: universities in their target countries that match
+ * their field of interest, ordered from the most accessible (highest
+ * acceptance rate) down to the most selective, so the feed spans safety
+ * through reach rather than being all long-shots or all sure things.
+ * Universities with no acceptance rate on record sort last -- we can't place
+ * them on that spectrum honestly, but they're still included so the list
+ * fills up.
+ */
+export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST_SIZE): RelevantUniversity[] {
+  // Highest acceptance rate first, so a shortlist spans safety -> reach.
+  // No rate on record sorts last: we can't honestly place those on the
+  // spectrum, but they're still eligible.
+  const byAccessibility = (a: RelevantUniversity, b: RelevantUniversity) => {
+    if (a.acceptanceRate == null && b.acceptanceRate == null) return 0;
+    if (a.acceptanceRate == null) return 1;
+    if (b.acceptanceRate == null) return -1;
+    return b.acceptanceRate - a.acceptanceRate;
+  };
+
+  // Field-matched universities rank first, but they rarely fill the list on
+  // their own -- only a small share of the catalog has programs/specialities
+  // recorded, so gating strictly on a match would return a handful of
+  // results (or none) for most students. Top up from the rest of their
+  // target countries instead of showing a near-empty shortlist.
+  const matched = relevant.filter((r) => r.matchesFieldOfInterest).sort(byAccessibility);
+  if (matched.length >= limit) return matched.slice(0, limit);
+
+  const rest = relevant.filter((r) => !r.matchesFieldOfInterest).sort(byAccessibility);
+  return [...matched, ...rest].slice(0, limit);
+}
+
+export interface UniversityForAnalysis {
+  id: string;
+  name: string;
+  city: string | null;
+  countryName: string;
+  photoUrl: string | null;
+  specialities: string[];
+  programs: { displayName: string; categoryName: string }[];
+  admissionStatistics: { year: number; acceptanceRate: number | null; level: "university" } | null;
+  globalRank: number | null;
+}
+
+// Batched (not per-university) fetch of everything the university-level
+// analysis pipeline needs -- specialities/programs as descriptive context
+// (never a gate), the real acceptance rate from university_admission_statistics
+// if we have one, and the best global rank as a fallback proxy. One round
+// trip per table for the whole chunk instead of an N+1 query per university.
+export async function getUniversitiesForAnalysis(universityIds: string[]): Promise<Map<string, UniversityForAnalysis>> {
+  const map = new Map<string, UniversityForAnalysis>();
+  if (universityIds.length === 0) return map;
+  const supabase = await createClient();
+
+  const [{ data: unis }, { data: programs }, { data: specialities }, { data: stats }, { data: rankings }] =
+    await Promise.all([
+      supabase.from("universities").select("id, name, city, photo_url, countries(name)").in("id", universityIds),
+      supabase
+        .from("university_programs")
+        .select("university_id, display_name, programs(program_categories(name))")
+        .in("university_id", universityIds),
+      supabase
+        .from("university_specialities")
+        .select("university_id, program_categories(name)")
+        .in("university_id", universityIds),
+      supabase
+        .from("university_admission_statistics")
+        .select("university_id, year, acceptance_rate")
+        .in("university_id", universityIds)
+        .order("year", { ascending: false }),
+      supabase
+        .from("university_rankings")
+        .select("university_id, ranking_value, ranking_year")
+        .in("university_id", universityIds)
+        .eq("ranking_type", "global")
+        .order("ranking_year", { ascending: false }),
+    ]);
+
+  for (const u of (unis ?? []) as any[]) {
+    map.set(u.id, {
+      id: u.id,
+      name: u.name,
+      city: u.city,
+      countryName: u.countries?.name ?? "",
+      photoUrl: u.photo_url,
+      specialities: [],
+      programs: [],
+      admissionStatistics: null,
+      globalRank: null,
+    });
+  }
+  for (const p of (programs ?? []) as any[]) {
+    const entry = map.get(p.university_id);
+    if (entry) entry.programs.push({ displayName: p.display_name, categoryName: p.programs?.program_categories?.name ?? "" });
+  }
+  for (const s of (specialities ?? []) as any[]) {
+    const entry = map.get(s.university_id);
+    const name = s.program_categories?.name;
+    if (entry && name) entry.specialities.push(name);
+  }
+  for (const s of (stats ?? []) as any[]) {
+    const entry = map.get(s.university_id);
+    if (entry && !entry.admissionStatistics) {
+      entry.admissionStatistics = { year: s.year, acceptanceRate: s.acceptance_rate, level: "university" };
+    }
+  }
+  for (const r of (rankings ?? []) as any[]) {
+    const entry = map.get(r.university_id);
+    if (entry && entry.globalRank == null) entry.globalRank = r.ranking_value;
+  }
+
+  return map;
 }
 
 export interface UniversityRankingRow {
@@ -214,6 +360,7 @@ export interface UniversityWithPrograms {
   photoAttribution: string | null;
   photoSourceUrl: string | null;
   rankings: UniversityRankingRow[];
+  specialities: string[];
   programs: {
     id: string;
     displayName: string;
@@ -232,7 +379,7 @@ export async function getUniversityWithPrograms(universityId: string): Promise<U
     .maybeSingle()) as { data: any };
   if (!uni) return null;
 
-  const [{ data: programs }, { data: rankings }] = await Promise.all([
+  const [{ data: programs }, { data: rankings }, { data: specialities }] = await Promise.all([
     supabase
       .from("university_programs")
       .select("id, display_name, degree_level, programs(category_id, program_categories(name))")
@@ -243,6 +390,10 @@ export async function getUniversityWithPrograms(universityId: string): Promise<U
       .select("ranking_type, ranking_value, ranking_org, ranking_year, source_url, program_categories(name)")
       .eq("university_id", universityId)
       .order("ranking_year", { ascending: false }),
+    supabase
+      .from("university_specialities")
+      .select("program_categories(name)")
+      .eq("university_id", universityId),
   ]);
 
   return {
@@ -271,6 +422,9 @@ export async function getUniversityWithPrograms(universityId: string): Promise<U
       categoryId: p.programs?.category_id ?? null,
       categoryName: p.programs?.program_categories?.name ?? "",
     })),
+    specialities: (specialities ?? [])
+      .map((s: any) => s.program_categories?.name)
+      .filter((name: string | undefined): name is string => Boolean(name)),
   };
 }
 

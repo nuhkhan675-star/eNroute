@@ -11,7 +11,7 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
         <Link href="/" className="transition-opacity hover:opacity-80">
           <Logo className="text-xl" />
@@ -24,6 +24,9 @@ export async function SiteHeader() {
             <>
               <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">
                 Dashboard
+              </Link>
+              <Link href="/saved" className="text-muted-foreground transition-colors hover:text-foreground">
+                Saved Schools
               </Link>
               <Link href="/chat" className="text-muted-foreground transition-colors hover:text-foreground">
                 Advisor Chat

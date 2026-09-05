@@ -13,7 +13,7 @@ import {
 
 // Reuses cached general-profile analyses (academic/extracurricular) if they
 // exist, otherwise runs them fresh. The profile is university-agnostic --
-// major fit is computed separately, per-program, by analyzeUniversityProgram
+// major fit is computed separately, per-university, by analyzeUniversity
 // whenever the student checks their chances at a specific program.
 export async function ensureGeneralAnalyses(
   profile: FullStudentProfile

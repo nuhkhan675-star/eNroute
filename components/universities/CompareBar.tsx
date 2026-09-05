@@ -9,7 +9,7 @@ export function CompareBar() {
   if (ids.length < 2) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/10 bg-card px-5 py-3 shadow-lg">
+    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-lg">
       <span className="text-sm font-medium">{ids.length} selected</span>
       <Button size="sm" nativeButton={false} render={<Link href={`/universities/compare?ids=${ids.join(",")}`}>Compare</Link>} />
       <Button size="sm" variant="ghost" onClick={clear}>

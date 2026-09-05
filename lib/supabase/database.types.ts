@@ -512,6 +512,70 @@ export type Database = {
           },
         ]
       }
+      grade_11_subjects: {
+        Row: {
+          created_at: string
+          grade: string
+          id: string
+          profile_id: string
+          subject_name: string
+        }
+        Insert: {
+          created_at?: string
+          grade: string
+          id?: string
+          profile_id: string
+          subject_name: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string
+          id?: string
+          profile_id?: string
+          subject_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_11_subjects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grade_9_subjects: {
+        Row: {
+          created_at: string
+          grade: string
+          id: string
+          profile_id: string
+          subject_name: string
+        }
+        Insert: {
+          created_at?: string
+          grade: string
+          id?: string
+          profile_id: string
+          subject_name: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string
+          id?: string
+          profile_id?: string
+          subject_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_9_subjects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_categories: {
         Row: {
           code: string
@@ -564,6 +628,45 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_universities: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          status: string
+          university_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          status?: string
+          university_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          status?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_universities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_universities_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
             referencedColumns: ["id"]
           },
         ]
@@ -668,36 +771,77 @@ export type Database = {
           },
         ]
       }
+      student_profile_versions: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          snapshot: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          snapshot: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_profile_versions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_profiles: {
         Row: {
+          cas_completed: boolean | null
           created_at: string
           curriculum_id: string | null
           grade_10_board: string | null
           id: string
           intended_program_category_id: string | null
           onboarding_completed_at: string | null
+          preferred_climate: string | null
+          preferred_industry_hub: string | null
+          preferred_ranking_band: string | null
           profile_strength: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          cas_completed?: boolean | null
           created_at?: string
           curriculum_id?: string | null
           grade_10_board?: string | null
           id?: string
           intended_program_category_id?: string | null
           onboarding_completed_at?: string | null
+          preferred_climate?: string | null
+          preferred_industry_hub?: string | null
+          preferred_ranking_band?: string | null
           profile_strength?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          cas_completed?: boolean | null
           created_at?: string
           curriculum_id?: string | null
           grade_10_board?: string | null
           id?: string
           intended_program_category_id?: string | null
           onboarding_completed_at?: string | null
+          preferred_climate?: string | null
+          preferred_industry_hub?: string | null
+          preferred_ranking_band?: string | null
           profile_strength?: number | null
           updated_at?: string
           user_id?: string
@@ -768,6 +912,42 @@ export type Database = {
           },
         ]
       }
+      student_target_countries: {
+        Row: {
+          country_id: string
+          created_at: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          country_id: string
+          created_at?: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          country_id?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_target_countries_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_target_countries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           available_levels: string[]
@@ -776,6 +956,7 @@ export type Database = {
           grade_scale: string
           id: string
           name: string
+          subject_group: string | null
         }
         Insert: {
           available_levels?: string[]
@@ -784,6 +965,7 @@ export type Database = {
           grade_scale: string
           id?: string
           name: string
+          subject_group?: string | null
         }
         Update: {
           available_levels?: string[]
@@ -792,6 +974,7 @@ export type Database = {
           grade_scale?: string
           id?: string
           name?: string
+          subject_group?: string | null
         }
         Relationships: [
           {
@@ -863,6 +1046,7 @@ export type Database = {
           data_year: number | null
           description: string | null
           id: string
+          ipeds_unit_id: number | null
           last_verified_at: string | null
           name: string
           photo_attribution: string | null
@@ -882,6 +1066,7 @@ export type Database = {
           data_year?: number | null
           description?: string | null
           id?: string
+          ipeds_unit_id?: number | null
           last_verified_at?: string | null
           name: string
           photo_attribution?: string | null
@@ -901,6 +1086,7 @@ export type Database = {
           data_year?: number | null
           description?: string | null
           id?: string
+          ipeds_unit_id?: number | null
           last_verified_at?: string | null
           name?: string
           photo_attribution?: string | null
@@ -925,6 +1111,169 @@ export type Database = {
             columns: ["data_source_id"]
             isOneToOne: false
             referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_admission_statistics: {
+        Row: {
+          acceptance_rate: number | null
+          admitted_count: number | null
+          applicant_count: number | null
+          confidence: string
+          created_at: string
+          data_source_id: string | null
+          id: string
+          last_verified_at: string | null
+          university_id: string
+          year: number
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          admitted_count?: number | null
+          applicant_count?: number | null
+          confidence?: string
+          created_at?: string
+          data_source_id?: string | null
+          id?: string
+          last_verified_at?: string | null
+          university_id: string
+          year: number
+        }
+        Update: {
+          acceptance_rate?: number | null
+          admitted_count?: number | null
+          applicant_count?: number | null
+          confidence?: string
+          created_at?: string
+          data_source_id?: string | null
+          id?: string
+          last_verified_at?: string | null
+          university_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_admission_statistics_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_admission_statistics_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_analysis: {
+        Row: {
+          academic_score: number
+          achievement_score: number
+          candidate_scholarships: Json
+          category: string
+          chance_max: number
+          chance_min: number
+          confidence: string
+          created_at: string
+          extracurricular_score: number
+          gaps: Json
+          id: string
+          leadership_score: number
+          model_version: string
+          profile_id: string
+          program_fit_score: number
+          reasoning: string
+          recommendations: Json
+          requirements_fit_score: number
+          selectivity_basis: string | null
+          selectivity_level: string
+          selectivity_rate: number | null
+          strengths: Json
+          university_data_version: string | null
+          university_id: string
+          university_program_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_score: number
+          achievement_score: number
+          candidate_scholarships?: Json
+          category: string
+          chance_max: number
+          chance_min: number
+          confidence: string
+          created_at?: string
+          extracurricular_score: number
+          gaps?: Json
+          id?: string
+          leadership_score: number
+          model_version: string
+          profile_id: string
+          program_fit_score: number
+          reasoning?: string
+          recommendations?: Json
+          requirements_fit_score: number
+          selectivity_basis?: string | null
+          selectivity_level: string
+          selectivity_rate?: number | null
+          strengths?: Json
+          university_data_version?: string | null
+          university_id: string
+          university_program_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_score?: number
+          achievement_score?: number
+          candidate_scholarships?: Json
+          category?: string
+          chance_max?: number
+          chance_min?: number
+          confidence?: string
+          created_at?: string
+          extracurricular_score?: number
+          gaps?: Json
+          id?: string
+          leadership_score?: number
+          model_version?: string
+          profile_id?: string
+          program_fit_score?: number
+          reasoning?: string
+          recommendations?: Json
+          requirements_fit_score?: number
+          selectivity_basis?: string | null
+          selectivity_level?: string
+          selectivity_rate?: number | null
+          strengths?: Json
+          university_data_version?: string | null
+          university_id?: string
+          university_program_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_analysis_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_analysis_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_analysis_university_program_id_fkey"
+            columns: ["university_program_id"]
+            isOneToOne: false
+            referencedRelation: "university_programs"
             referencedColumns: ["id"]
           },
         ]
@@ -1055,6 +1404,42 @@ export type Database = {
           },
           {
             foreignKeyName: "university_rankings_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      university_specialities: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          university_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          university_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_strengths_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_strengths_university_id_fkey"
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"

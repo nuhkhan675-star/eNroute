@@ -1,19 +1,29 @@
-import type { ProgramAnalysisBundle } from "@/lib/db/analyses";
+import type { UniversityAnalysisRecord } from "@/lib/db/analyses";
+import { CATEGORY_LABELS, chancePoint } from "@/lib/ai/prediction/scoringEngine";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
 
-const CLASSIFICATION_STYLES: Record<string, string> = {
-  reach: "bg-red-500/15 text-red-400 border border-red-500/30",
-  target: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-  likely: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+const CATEGORY_STYLES: Record<string, string> = {
+  high_reach: "bg-red-500/15 text-red-300 border border-red-500/40",
+  reach: "bg-orange-500/15 text-orange-300 border border-orange-500/40",
+  target: "bg-blue-500/15 text-blue-300 border border-blue-500/40",
+  likely: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40",
+};
+
+const SELECTIVITY_LABELS: Record<string, string> = {
+  extreme: "Extremely selective",
+  very_high: "Very highly selective",
+  high: "Highly selective",
+  moderate: "Moderately selective",
+  low: "Less selective",
 };
 
 const IMPACT_SECTIONS: { priority: "high" | "medium" | "low"; label: string; style: string }[] = [
   { priority: "high", label: "High impact", style: "bg-red-500/15 text-red-400 border border-red-500/30" },
   { priority: "medium", label: "Medium impact", style: "bg-amber-500/15 text-amber-400 border border-amber-500/30" },
-  { priority: "low", label: "Optional", style: "bg-white/10 text-muted-foreground border border-white/15" },
+  { priority: "low", label: "Optional", style: "bg-secondary text-muted-foreground border border-border" },
 ];
 
 const LEVEL_LABEL: Record<string, string> = {
@@ -29,53 +39,55 @@ export interface FactualRateForCompare {
 }
 
 interface Props {
-  bundle: ProgramAnalysisBundle;
-  universityName?: string;
-  photoUrl?: string | null;
+  analysis: UniversityAnalysisRecord;
   factualRate?: FactualRateForCompare | null;
 }
 
-const SCORE_ROWS: { key: keyof NonNullable<Props["bundle"]["scores"]>; label: string }[] = [
-  { key: "academic", label: "Academic competitiveness" },
-  { key: "programFit", label: "Program fit" },
-  { key: "extracurricular", label: "Extracurricular profile" },
-  { key: "requirementsFit", label: "Requirements fit" },
-  { key: "overall", label: "Overall competitiveness" },
+const SCORE_ROWS: { key: keyof Pick<UniversityAnalysisRecord, "academicScore" | "programFitScore" | "extracurricularScore" | "leadershipScore" | "achievementScore" | "requirementsFitScore">; label: string }[] = [
+  { key: "academicScore", label: "Academic competitiveness" },
+  { key: "programFitScore", label: "Program fit" },
+  { key: "extracurricularScore", label: "Extracurricular profile" },
+  { key: "leadershipScore", label: "Leadership / impact" },
+  { key: "achievementScore", label: "Achievement strength" },
+  { key: "requirementsFitScore", label: "Requirements fit" },
 ];
 
-export function ProgramAnalysis({ bundle, universityName, photoUrl, factualRate }: Props) {
-  const { classification, finalStrategy, scholarshipAnalysis, scores } = bundle;
+export function ProgramAnalysis({ analysis, factualRate }: Props) {
   const hasFactualRate = factualRate && factualRate.acceptanceRate != null;
-  const combinedGaps = [...finalStrategy.weaknesses, ...finalStrategy.missing_profile_components];
+  const isExtremelySelective = analysis.selectivityLevel === "extreme" || analysis.selectivityLevel === "very_high";
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card className="overflow-hidden">
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+      <Card className="overflow-hidden lg:col-span-2">
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-3">
             <UniversityPhoto
-              photoUrl={photoUrl ?? null}
-              alt={universityName ?? ""}
-              className="size-11 shrink-0 overflow-hidden rounded-full border border-white/10"
+              photoUrl={analysis.photoUrl}
+              alt={analysis.universityName}
+              className="size-11 shrink-0 overflow-hidden rounded-full border border-border"
               sizes="44px"
               iconClassName="size-5"
             />
             <CardTitle className="text-base">Admissions estimate</CardTitle>
           </div>
-          <Badge className={`capitalize ${CLASSIFICATION_STYLES[classification.classification]}`}>
-            {classification.classification}
-          </Badge>
+          <Badge className={CATEGORY_STYLES[analysis.category]}>{CATEGORY_LABELS[analysis.category]}</Badge>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <p className="text-sm">{classification.likelihoodRangeLabel}</p>
+          <p className="text-2xl font-semibold tracking-tight">
+            {chancePoint(analysis.chanceMin, analysis.chanceMax)}%
+          </p>
           <p className="text-xs text-muted-foreground">
-            <span className="capitalize">{finalStrategy.confidence} confidence</span> · This is a
-            model-based estimate, not a guaranteed outcome, computed from your profile and whatever
-            verified admissions data we have — never an invented exact probability, not an official
-            admission prediction.
+            {SELECTIVITY_LABELS[analysis.selectivityLevel]} program ·{" "}
+            <span className="capitalize">{analysis.confidence} confidence</span>
+            {isExtremelySelective && " · admissions at this level of selectivity are especially unpredictable"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Estimated by our admissions model from your profile and whatever verified admissions data
+            we have. This is not an official prediction or guarantee from the university, and it is
+            never a precise number pretending to be certain.
           </p>
 
-          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="rounded-lg border border-border bg-muted/60 p-3">
             {hasFactualRate ? (
               <>
                 <p className="text-xs text-muted-foreground">
@@ -83,11 +95,12 @@ export function ProgramAnalysis({ bundle, universityName, photoUrl, factualRate 
                 </p>
                 <p className="text-sm font-medium">{factualRate!.acceptanceRate}%</p>
                 <p className="mt-2 text-xs text-muted-foreground">Your estimated admission likelihood</p>
-                <p className="text-sm font-medium">{classification.likelihoodRangeLabel.replace("Estimated admission likelihood: ", "")}</p>
+                <p className="text-sm font-medium">{chancePoint(analysis.chanceMin, analysis.chanceMax)}%</p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   These differ because the published rate reflects all applicants across a past
                   admissions cycle, while your estimate weighs your specific academic record, subject
-                  fit, and extracurriculars against this program&apos;s requirements.
+                  fit, and extracurriculars against this program&apos;s requirements and this
+                  university&apos;s overall selectivity.
                   {factualRate!.level !== "program" &&
                     " University-level acceptance data was available, but program-specific admission data was not — treat your estimate as more directly relevant."}
                 </p>
@@ -95,81 +108,78 @@ export function ProgramAnalysis({ bundle, universityName, photoUrl, factualRate 
             ) : (
               <p className="text-xs text-muted-foreground">
                 No verified historical acceptance-rate data is available for this program yet, so your
-                estimate above is based solely on your profile against this program&apos;s published
-                requirements.
+                estimate above leans more heavily on this university&apos;s general selectivity level
+                and your profile against this program&apos;s published requirements.
               </p>
             )}
           </div>
 
           <Separator />
-          <p className="text-sm">{finalStrategy.narrative}</p>
+          <p className="text-sm">{analysis.reasoning}</p>
         </CardContent>
       </Card>
 
-      {scores && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Model assessment</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Our model&apos;s read of your profile against this program -- not an official university
-              score.
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {SCORE_ROWS.map((row) => (
-              <div key={row.key} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{row.label}</span>
-                <span className="font-medium">{scores[row.key].toFixed(1)}/10</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">What your profile already has</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
-              {finalStrategy.strengths.map((s, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="shrink-0 text-emerald-400">✓</span> {s}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">What your profile is missing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {combinedGaps.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Your profile currently meets the major requirements we could verify.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
-                {combinedGaps.map((s, i) => (
-                  <li key={i} className="flex gap-2">
-                    <span className="shrink-0">•</span> {s}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Model assessment</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Our model&apos;s read of your profile against this program -- not an official university
+            score.
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {SCORE_ROWS.map((row) => (
+            <div key={row.key} className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="font-medium">{analysis[row.key]}/100</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">What your profile already has</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+            {analysis.strengths.map((s, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="shrink-0 text-emerald-400">✓</span> {s}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">What your profile is missing</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {analysis.gaps.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Your profile currently meets the major requirements we could verify.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
+              {analysis.gaps.map((s, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="shrink-0">•</span> {s}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
           <CardTitle className="text-base">What would strengthen your application</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="grid gap-4 lg:grid-cols-3">
           {IMPACT_SECTIONS.map((section) => {
-            const tips = finalStrategy.improvement_tips.filter((t) => t.priority === section.priority);
+            const tips = analysis.recommendations.filter((t) => t.priority === section.priority);
             if (tips.length === 0) return null;
             return (
               <div key={section.priority}>
@@ -187,13 +197,13 @@ export function ProgramAnalysis({ bundle, universityName, photoUrl, factualRate 
         </CardContent>
       </Card>
 
-      {scholarshipAnalysis && scholarshipAnalysis.candidate_scholarships.length > 0 && (
-        <Card>
+      {analysis.candidateScholarships.length > 0 && (
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Scholarship fit</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {scholarshipAnalysis.candidate_scholarships.map((s, i) => (
+          <CardContent className="grid gap-3 lg:grid-cols-2">
+            {analysis.candidateScholarships.map((s, i) => (
               <div key={i}>
                 <p className="text-sm font-medium">
                   {s.name} <Badge variant="outline" className="ml-1 capitalize">{s.likelihood} likelihood</Badge>

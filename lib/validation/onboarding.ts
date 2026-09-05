@@ -15,6 +15,13 @@ export const grade10SubjectEntrySchema = z.object({
 });
 export type Grade10SubjectEntry = z.infer<typeof grade10SubjectEntrySchema>;
 
+// Grade 9 and 11 use the identical shape -- optional secondary-school layers
+// alongside the required Grade 10 above.
+export const grade9SubjectEntrySchema = grade10SubjectEntrySchema;
+export type Grade9SubjectEntry = z.infer<typeof grade9SubjectEntrySchema>;
+export const grade11SubjectEntrySchema = grade10SubjectEntrySchema;
+export type Grade11SubjectEntry = z.infer<typeof grade11SubjectEntrySchema>;
+
 export const extracurricularCategories = [
   "sports",
   "leadership",
@@ -46,6 +53,8 @@ export type ExtracurricularEntry = z.infer<typeof extracurricularEntrySchema>;
 
 export const examTypes = [
   "SAT",
+  "SAT_MATH",
+  "SAT_READING_WRITING",
   "ACT",
   "IELTS",
   "TOEFL_IBT",
@@ -57,7 +66,9 @@ export const examTypes = [
 ] as const;
 
 export const EXAM_LABELS: Record<(typeof examTypes)[number], string> = {
-  SAT: "SAT",
+  SAT: "SAT (combined/other)",
+  SAT_MATH: "SAT Math",
+  SAT_READING_WRITING: "SAT Reading & Writing",
   ACT: "ACT",
   IELTS: "IELTS",
   TOEFL_IBT: "TOEFL iBT",
@@ -75,12 +86,59 @@ export const examScoreEntrySchema = z.object({
 });
 export type ExamScoreEntry = z.infer<typeof examScoreEntrySchema>;
 
+export const climateOptions = ["no_preference", "warm", "balanced", "cold"] as const;
+export const industryHubOptions = [
+  "no_preference",
+  "tech",
+  "finance",
+  "business",
+  "creative",
+  "research",
+  "healthcare",
+  "government_policy",
+  "manufacturing_engineering",
+] as const;
+export const rankingBandOptions = ["no_preference", "top_50", "top_100", "top_200"] as const;
+
+export const CLIMATE_LABELS: Record<(typeof climateOptions)[number], string> = {
+  no_preference: "No preference",
+  warm: "Warm",
+  balanced: "Balanced",
+  cold: "Cold",
+};
+export const INDUSTRY_HUB_LABELS: Record<(typeof industryHubOptions)[number], string> = {
+  no_preference: "No preference",
+  tech: "Tech hub",
+  finance: "Finance capital",
+  business: "Business hub",
+  creative: "Creative hub",
+  research: "Research hub",
+  healthcare: "Healthcare & biotech hub",
+  government_policy: "Government & policy hub",
+  manufacturing_engineering: "Manufacturing & engineering hub",
+};
+export const RANKING_BAND_LABELS: Record<(typeof rankingBandOptions)[number], string> = {
+  no_preference: "No preference",
+  top_50: "Top 50",
+  top_100: "Top 100",
+  top_200: "Top 200",
+};
+
 export const onboardingDraftSchema = z.object({
   curriculumId: z.string().uuid().nullable(),
   subjects: z.array(subjectEntrySchema).default([]),
+  casCompleted: z.boolean().nullable(),
+  targetCountryIds: z.array(z.string().uuid()).default([]),
+  // One board covers grades 9-11 -- a student virtually always stays on the
+  // same secondary curriculum across those years.
   grade10Board: z.string().nullable(),
+  grade9Subjects: z.array(grade9SubjectEntrySchema).default([]),
   grade10Subjects: z.array(grade10SubjectEntrySchema).default([]),
+  grade11Subjects: z.array(grade11SubjectEntrySchema).default([]),
   fieldOfInterestId: z.string().uuid().nullable(),
+  preferredClimate: z.enum(climateOptions).nullable(),
+  preferredIndustryHub: z.enum(industryHubOptions).nullable(),
+  preferredRankingBand: z.enum(rankingBandOptions).nullable(),
   extracurriculars: z.array(extracurricularEntrySchema).default([]),
   examScores: z.array(examScoreEntrySchema).default([]),
 });
@@ -89,8 +147,10 @@ export type OnboardingDraft = z.infer<typeof onboardingDraftSchema>;
 export const ONBOARDING_STEPS = [
   "curriculum",
   "subjects",
-  "grade10",
+  "targetCountries",
+  "secondaryGrades",
   "fieldOfInterest",
+  "preferences",
   "extracurriculars",
   "examScores",
   "review",

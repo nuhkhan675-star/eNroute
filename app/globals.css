@@ -48,76 +48,95 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* eNroute brand palette: black-and-red, always-on (no light/dark toggle --
-   :root and .dark share the same values so the theme is consistent
-   regardless of the visitor's system preference). */
+/* eNroute brand palette: deep-navy and academic blue, always-on (no
+   light/dark toggle -- :root and .dark share the same values so the theme is
+   consistent regardless of the visitor's system preference).
+
+   The surface ladder deliberately steps background -> popover/muted -> card
+   -> accent so stacked sections stay visually separable instead of reading
+   as one flat dark block, while the whole experience stays dark. */
 :root {
-  --background: oklch(0.11 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.16 0.006 25);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.15 0.006 25);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.577 0.245 27.325);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.2 0.006 25);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.19 0.006 25);
-  --muted-foreground: oklch(0.65 0.01 25);
-  --accent: oklch(0.24 0.03 27);
-  --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.65 0.26 27.325);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.577 0.245 27.325);
-  --chart-1: oklch(0.577 0.245 27.325);
-  --chart-2: oklch(0.7 0.19 25);
-  --chart-3: oklch(0.5 0.02 25);
-  --chart-4: oklch(0.4 0.02 25);
-  --chart-5: oklch(0.3 0.02 25);
+  /* Surfaces: professional navy base, each step lifting slightly so stacked
+     sections stay separable without ever going light. */
+  --background: #0a1628;
+  --foreground: #ffffff;
+  --card: #14263f;
+  --card-foreground: #ffffff;
+  --popover: #0f1e33;
+  --popover-foreground: #ffffff;
+
+  /* Cornflower-blue accent (paired with the lighter sky blue in --chart-2).
+     The fill is light, so its label is deep navy rather than white -- that
+     lands at ~7.5:1 on the button AND lets the same token double as link
+     text at ~7:1, which a mid-blue can't do (too dark for links on navy,
+     too light for white labels). */
+  --primary: #8fc4ff;
+  --primary-foreground: #06182b;
+  --secondary: #16304f;
+  --secondary-foreground: #ffffff;
+
+  --muted: #0f1e33;
+  /* Bright blue-white for secondary copy -- ~11:1 on the background. */
+  --muted-foreground: #c8d8ec;
+  /* Hover/active surface -- a lifted navy, never a grey wash. */
+  --accent: #1c3b60;
+  --accent-foreground: #ffffff;
+  --destructive: #ff5f5f;
+
+  /* Borders are navy-blue, never light grey. */
+  --border: #22405f;
+  --input: #2a4e74;
+  --ring: #8fc4ff;
+
+  --chart-1: #8fc4ff;
+  --chart-2: #a5d4ff;
+  --chart-3: #5b8ee6;
+  --chart-4: #3f6bb8;
+  --chart-5: #c2e2ff;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.13 0.006 25);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.577 0.245 27.325);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.2 0.006 25);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.577 0.245 27.325);
+  --sidebar: #0f1e33;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #8fc4ff;
+  --sidebar-primary-foreground: #06182b;
+  --sidebar-accent: #16304f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22405f;
+  --sidebar-ring: #8fc4ff;
 }
 
 .dark {
-  --background: oklch(0.11 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.16 0.006 25);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.15 0.006 25);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.577 0.245 27.325);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.2 0.006 25);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.19 0.006 25);
-  --muted-foreground: oklch(0.65 0.01 25);
-  --accent: oklch(0.24 0.03 27);
-  --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.65 0.26 27.325);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.577 0.245 27.325);
-  --chart-1: oklch(0.577 0.245 27.325);
-  --chart-2: oklch(0.7 0.19 25);
-  --chart-3: oklch(0.5 0.02 25);
-  --chart-4: oklch(0.4 0.02 25);
-  --chart-5: oklch(0.3 0.02 25);
-  --sidebar: oklch(0.13 0.006 25);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.577 0.245 27.325);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.2 0.006 25);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.577 0.245 27.325);
+  --background: #0a1628;
+  --foreground: #ffffff;
+  --card: #14263f;
+  --card-foreground: #ffffff;
+  --popover: #0f1e33;
+  --popover-foreground: #ffffff;
+  --primary: #8fc4ff;
+  --primary-foreground: #06182b;
+  --secondary: #16304f;
+  --secondary-foreground: #ffffff;
+  --muted: #0f1e33;
+  --muted-foreground: #c8d8ec;
+  --accent: #1c3b60;
+  --accent-foreground: #ffffff;
+  --destructive: #ff5f5f;
+  --border: #22405f;
+  --input: #2a4e74;
+  --ring: #8fc4ff;
+  --chart-1: #8fc4ff;
+  --chart-2: #a5d4ff;
+  --chart-3: #5b8ee6;
+  --chart-4: #3f6bb8;
+  --chart-5: #c2e2ff;
+  --sidebar: #0f1e33;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #8fc4ff;
+  --sidebar-primary-foreground: #06182b;
+  --sidebar-accent: #16304f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22405f;
+  --sidebar-ring: #8fc4ff;
 }
 
 @layer base {
@@ -126,6 +145,39 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Ambient light that follows the cursor. Position comes from CSS custom
+     properties written by components/layout/CursorGlow.tsx (throttled to one
+     write per frame, no React re-render). Defaults to screen-centre so there
+     is no flash at 0,0 before the first mouse move, and so touch devices --
+     which never fire mousemove -- get a static, barely-there centre glow
+     rather than nothing anchored in a corner. Uses the same
+     color-mix(var(--primary)) treatment as the hero gradient so it tracks the
+     accent colour automatically. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      var(--cursor-glow-radius, 480px) circle at var(--cursor-x, 50%) var(--cursor-y, 50%),
+      color-mix(in oklch, var(--primary), transparent var(--cursor-glow-transparency, 90%)),
+      transparent 70%
+    );
+  }
+
+  /* Page content sits above the glow layer. */
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before {
+      display: none;
+    }
   }
   html {
     @apply font-sans;

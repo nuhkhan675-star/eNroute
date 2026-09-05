@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { analyzeProfile } from "@/lib/ai/orchestrator";
+import { friendlyAnalysisError } from "@/lib/ai/client";
 
 export async function POST() {
   const supabase = await createClient();
@@ -20,7 +21,7 @@ export async function POST() {
     });
   } catch (err) {
     console.error("Profile analysis failed", err);
-    const message = err instanceof Error ? err.message : "Analysis failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const { message, status } = friendlyAnalysisError(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

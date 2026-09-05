@@ -1,6 +1,6 @@
 export function FounderSection() {
   return (
-    <section className="w-full border-t border-white/10 px-6 py-24">
+    <section className="w-full border-t border-border px-6 py-24">
       <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 text-center">
         <span className="text-xs font-medium tracking-widest text-primary uppercase">About the Founder</span>
         <div className="flex size-16 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xl font-semibold text-primary">

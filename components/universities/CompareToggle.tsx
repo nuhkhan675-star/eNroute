@@ -22,7 +22,7 @@ export function CompareToggle({ universityId }: { universityId: string }) {
         "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium backdrop-blur transition-colors",
         checked
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-white/20 bg-black/50 text-white hover:border-white/40",
+          : "border-white/20 bg-[#081a2f]/70 text-white hover:border-primary/60",
         disabled && "cursor-not-allowed opacity-50"
       )}
     >

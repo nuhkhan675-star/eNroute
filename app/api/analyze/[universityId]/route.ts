@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { ensureGeneralAnalyses } from "@/lib/ai/orchestrator";
-import { analyzeUniversityProgram } from "@/lib/ai/analyzeProgram";
+import { analyzeUniversity } from "@/lib/ai/analyzeUniversity";
+import { friendlyAnalysisError } from "@/lib/ai/client";
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: Promise<{ universityProgramId: string }> }
+  { params }: { params: Promise<{ universityId: string }> }
 ) {
-  const { universityProgramId } = await params;
+  const { universityId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,19 +21,19 @@ export async function POST(
 
   try {
     const { academic, extracurricular } = await ensureGeneralAnalyses(profile);
-    const result = await analyzeUniversityProgram({
+    const result = await analyzeUniversity({
       profile,
       academic,
       extracurricular,
-      universityProgramId,
+      universityId,
     });
     if (!result) {
-      return NextResponse.json({ error: "Program not found" }, { status: 404 });
+      return NextResponse.json({ error: "University not found" }, { status: 404 });
     }
     return NextResponse.json(result);
   } catch (err) {
-    console.error("Program analysis failed", err);
-    const message = err instanceof Error ? err.message : "Analysis failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("University analysis failed", err);
+    const { message, status } = friendlyAnalysisError(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getUniversityWithPrograms, getUniversityProgramDetail } from "@/lib/db/universities";
+import { getUniversityWithPrograms, getUniversitiesForAnalysis } from "@/lib/db/universities";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { getProgramAnalysisBundle, type ProgramAnalysisBundle } from "@/lib/db/analyses";
-import { ensureGeneralAnalyses } from "@/lib/ai/orchestrator";
-import { analyzeUniversityProgram } from "@/lib/ai/analyzeProgram";
+import { getUniversityAnalysis } from "@/lib/db/analyses";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
 import { ProgramAnalysis } from "@/components/universities/ProgramAnalysis";
-import { AnalyzeProgramButton } from "@/components/universities/AnalyzeProgramButton";
+import { AnalyzeUniversityButton } from "@/components/universities/AnalyzeUniversityButton";
 import { RankingBadge } from "@/components/universities/RankingBadge";
 import { CompareToggle } from "@/components/universities/CompareToggle";
+import { SaveToggle } from "@/components/universities/SaveToggle";
+import { isUniversitySaved } from "@/lib/db/saved";
 import { MessageCircle } from "lucide-react";
 
 export default async function UniversityDetailPage({
@@ -30,48 +30,24 @@ export default async function UniversityDetailPage({
   } = await supabase.auth.getUser();
   const profile = user ? await getProfileByUserId(user.id) : null;
 
-  const chosenProgram =
-    university.programs.length > 0
-      ? (university.programs.find((p) => p.categoryId === profile?.fieldOfInterest?.id) ?? university.programs[0])
-      : null;
-
-  const chosenProgramDetail = chosenProgram ? await getUniversityProgramDetail(chosenProgram.id) : null;
-
-  let bundle: ProgramAnalysisBundle | null = null;
-  let analysisError: string | null = null;
-
-  if (profile && chosenProgram) {
-    bundle = await getProgramAnalysisBundle(profile.id, chosenProgram.id);
-    if (!bundle) {
-      try {
-        const { academic, extracurricular } = await ensureGeneralAnalyses(profile);
-        const result = await analyzeUniversityProgram({
-          profile,
-          academic,
-          extracurricular,
-          universityProgramId: chosenProgram.id,
-        });
-        if (result) {
-          bundle = {
-            classification: result.classification,
-            finalStrategy: result.finalStrategy,
-            scholarshipAnalysis: result.scholarshipAnalysis,
-            scores: result.scores,
-            analyzedAt: new Date().toISOString(),
-          };
-        }
-      } catch (err) {
-        analysisError = err instanceof Error ? err.message : "We couldn't analyze your chances here yet.";
-      }
-    }
-  }
+  // Cache-only read -- never triggers a Gemini call just from viewing this
+  // page. Analysis only runs when the student explicitly clicks "Analyze My
+  // Chances" (see AnalyzeUniversityButton), so browsing several universities
+  // never silently burns API quota. Chances are computed per-university now,
+  // not per-program -- a missing program on record never blocks this.
+  const [analysis, statsMap, saved] = await Promise.all([
+    profile ? getUniversityAnalysis(profile.id, university.id) : Promise.resolve(null),
+    getUniversitiesForAnalysis([university.id]),
+    profile ? isUniversitySaved(profile.id, university.id) : Promise.resolve(false),
+  ]);
+  const factualStats = statsMap.get(university.id)?.admissionStatistics ?? null;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
       <UniversityPhoto
         photoUrl={university.photoUrl}
         alt={university.name}
-        className="mb-6 h-48 w-full rounded-2xl border border-white/10"
+        className="mb-6 h-48 w-full rounded-2xl border border-border"
         sizes="672px"
         iconClassName="size-12"
       />
@@ -86,6 +62,7 @@ export default async function UniversityDetailPage({
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <CompareToggle universityId={university.id} />
+          {user && <SaveToggle universityId={university.id} initialSaved={saved} />}
           {university.rankings.map((r, i) => (
             <RankingBadge key={i} ranking={{ value: r.value, type: r.type, org: r.org, year: r.year }} />
           ))}
@@ -122,50 +99,31 @@ export default async function UniversityDetailPage({
         </p>
       )}
 
-      <h2 className="mt-8 text-lg font-medium">Programs available</h2>
-      <div className="mt-3 flex flex-col gap-3">
-        {university.programs.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            No programs recorded for this university yet.
-          </p>
-        )}
-        {university.programs.map((p) => (
-          <Link key={p.id} href={`/universities/${university.id}/programs/${p.id}`}>
-            <Card className="transition-colors hover:border-primary/40">
-              <CardContent className="flex items-center justify-between py-4">
-                <div>
-                  <p className="font-medium">{p.displayName}</p>
-                  <p className="text-sm text-muted-foreground">{p.categoryName}</p>
-                </div>
-                <Badge variant="outline" className="capitalize">
-                  {p.degreeLevel}
-                </Badge>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      {chosenProgram && (
+      {(university.specialities.length > 0 || university.programs.length > 0) && (
         <>
-          <h2 className="mt-8 text-lg font-medium">
-            Admission requirements <span className="text-xs font-normal text-muted-foreground">(FACT)</span>
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">For {chosenProgram.displayName}.</p>
-          <Card className="mt-3">
-            <CardContent className="flex flex-col gap-2 py-4">
-              {!chosenProgramDetail || chosenProgramDetail.requirements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Not recorded in our database yet.</p>
-              ) : (
-                chosenProgramDetail.requirements.map((r, i) => (
-                  <p key={i} className="text-sm">
-                    {r.description}
-                    {r.minGrade ? ` (min: ${r.minGrade})` : ""}
-                  </p>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <h2 className="mt-8 text-lg font-medium">Specialities &amp; programs</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Descriptive detail about what this university offers -- your chance estimate below is
+            computed for the university as a whole, not any one specific program.
+          </p>
+          {university.specialities.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {university.specialities.map((s) => (
+                <Badge key={s} variant="outline">
+                  {s}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {university.programs.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
+              {university.programs.map((p) => (
+                <li key={p.id}>
+                  {p.displayName} <span className="text-xs">({p.categoryName})</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 
@@ -190,46 +148,27 @@ export default async function UniversityDetailPage({
               to see a personalized analysis.
             </CardContent>
           </Card>
-        ) : university.programs.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              We don&apos;t have program-level data for this university yet, so we can&apos;t
-              estimate your chances honestly. Check back as we add more universities.
-            </CardContent>
-          </Card>
-        ) : analysisError ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-4 py-8 text-center text-sm text-muted-foreground">
-              {analysisError}
-              {chosenProgram && <AnalyzeProgramButton universityProgramId={chosenProgram.id} />}
-            </CardContent>
-          </Card>
-        ) : bundle && chosenProgram ? (
+        ) : analysis ? (
           <div className="flex flex-col gap-4">
-            <p className="text-xs text-muted-foreground">
-              Based on {chosenProgram.displayName}
-              {chosenProgram.categoryId === profile.fieldOfInterest?.id
-                ? " (matches your field of interest)"
-                : " -- closest program we have data for"}
-              .
-            </p>
-            <ProgramAnalysis
-              bundle={bundle}
-              universityName={university.name}
-              photoUrl={university.photoUrl}
-              factualRate={chosenProgramDetail?.admissionStatistics[0] ?? null}
-            />
+            <ProgramAnalysis analysis={analysis} factualRate={factualStats} />
             <div className="flex justify-center gap-3">
-              <AnalyzeProgramButton universityProgramId={chosenProgram.id} hasExistingAnalysis />
+              <AnalyzeUniversityButton universityId={university.id} hasExistingAnalysis />
               <Link
-                href={`/chat?program=${chosenProgram.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm hover:border-primary/50 hover:bg-primary/10"
+                href={`/chat?university=${university.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm hover:border-primary/50 hover:bg-primary/10"
               >
                 <MessageCircle className="size-4" /> Ask the advisor about this
               </Link>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-8 text-center text-sm text-muted-foreground">
+              See an estimate of your admission chances, strengths, and gaps for {university.name}.
+              <AnalyzeUniversityButton universityId={university.id} />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ export interface Subject {
   name: string;
   available_levels: string[];
   grade_scale: string;
+  subject_group: string | null;
 }
 
 export interface ProgramCategory {
@@ -41,7 +42,7 @@ export async function getSubjectsForCurriculum(curriculumId: string): Promise<Su
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("subjects")
-    .select("id, curriculum_id, name, available_levels, grade_scale")
+    .select("id, curriculum_id, name, available_levels, grade_scale, subject_group")
     .eq("curriculum_id", curriculumId)
     .order("name");
   if (error) throw error;

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getUniversityWithPrograms, getUniversityCardExtras } from "@/lib/db/universities";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { getProgramAnalysisBundle } from "@/lib/db/analyses";
+import { getUniversityAnalysis } from "@/lib/db/analyses";
+import { CATEGORY_LABELS, chancePoint } from "@/lib/ai/prediction/scoringEngine";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
 import { RankingBadge } from "@/components/universities/RankingBadge";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +12,11 @@ import { Award } from "lucide-react";
 
 const MAX_COMPARE = 4;
 
-const CLASSIFICATION_STYLES: Record<string, string> = {
-  reach: "bg-red-500/15 text-red-400 border border-red-500/30",
-  target: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-  likely: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+const CATEGORY_STYLES: Record<string, string> = {
+  high_reach: "bg-red-500/15 text-red-300 border border-red-500/40",
+  reach: "bg-orange-500/15 text-orange-300 border border-orange-500/40",
+  target: "bg-blue-500/15 text-blue-300 border border-blue-500/40",
+  likely: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40",
 };
 
 export default async function ComparePage({
@@ -38,21 +40,15 @@ export default async function ComparePage({
 
   const extrasByUniversity = await getUniversityCardExtras(validUniversities.map((u) => u.id));
 
-  const bundles = profile
+  const analyses = profile
     ? await Promise.all(
-        validUniversities.map(async (u) => {
-          const chosenProgram =
-            u.programs.find((p) => p.categoryId === profile.fieldOfInterest?.id) ?? u.programs[0] ?? null;
-          if (!chosenProgram) return null;
-          return {
-            universityId: u.id,
-            programName: chosenProgram.displayName,
-            bundle: await getProgramAnalysisBundle(profile.id, chosenProgram.id),
-          };
-        })
+        validUniversities.map(async (u) => ({
+          universityId: u.id,
+          analysis: await getUniversityAnalysis(profile.id, u.id),
+        }))
       )
     : [];
-  const bundleByUniversity = Object.fromEntries(bundles.filter(Boolean).map((b) => [b!.universityId, b]));
+  const analysisByUniversity = Object.fromEntries(analyses.map((b) => [b.universityId, b]));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -65,7 +61,7 @@ export default async function ComparePage({
       <div className="mt-6 overflow-x-auto">
         <div className="grid min-w-[640px] gap-4" style={{ gridTemplateColumns: `repeat(${validUniversities.length}, minmax(220px, 1fr))` }}>
           {validUniversities.map((u) => (
-            <div key={u.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-card p-4">
+            <div key={u.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
               <UniversityPhoto
                 photoUrl={u.photoUrl}
                 alt={u.name}
@@ -116,17 +112,14 @@ export default async function ComparePage({
               <Row label="Your chances">
                 {!profile ? (
                   <span className="text-sm text-muted-foreground">Log in to see</span>
-                ) : bundleByUniversity[u.id]?.bundle ? (
+                ) : analysisByUniversity[u.id]?.analysis ? (
                   <div className="flex flex-col gap-1">
-                    <Badge
-                      className={`w-fit gap-1 capitalize ${CLASSIFICATION_STYLES[bundleByUniversity[u.id]!.bundle!.classification.classification]}`}
-                    >
-                      {bundleByUniversity[u.id]!.bundle!.classification.classification} ·{" "}
-                      {bundleByUniversity[u.id]!.bundle!.classification.likelihoodRangeLabel}
+                    <Badge className={`w-fit gap-1 ${CATEGORY_STYLES[analysisByUniversity[u.id].analysis!.category]}`}>
+                      {CATEGORY_LABELS[analysisByUniversity[u.id].analysis!.category]} ·{" "}
+                      {chancePoint(analysisByUniversity[u.id].analysis!.chanceMin, analysisByUniversity[u.id].analysis!.chanceMax)}%
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {bundleByUniversity[u.id]!.bundle!.classification.confidence} confidence ·{" "}
-                      {bundleByUniversity[u.id]!.programName}
+                      {analysisByUniversity[u.id].analysis!.confidence} confidence
                     </span>
                   </div>
                 ) : (
@@ -155,7 +148,7 @@ export default async function ComparePage({
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-white/10 pt-2">
+    <div className="border-t border-border pt-2">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <div className="mt-1">{children}</div>
     </div>

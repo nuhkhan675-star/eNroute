@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { CursorGlow } from "@/components/layout/CursorGlow";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <CursorGlow />
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
         <Toaster />

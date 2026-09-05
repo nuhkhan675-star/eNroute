@@ -18,10 +18,10 @@ interface Message {
 interface Props {
   conversationId: string;
   initialMessages: Message[];
-  focusedUniversityProgramId?: string;
+  focusedUniversityId?: string;
 }
 
-export function ChatWindow({ conversationId, initialMessages, focusedUniversityProgramId }: Props) {
+export function ChatWindow({ conversationId, initialMessages, focusedUniversityId }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -55,7 +55,7 @@ export function ChatWindow({ conversationId, initialMessages, focusedUniversityP
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, message: text, focusedUniversityProgramId }),
+        body: JSON.stringify({ conversationId, message: text, focusedUniversityId }),
       });
       if (!res.ok || !res.body) throw new Error("Chat request failed");
 

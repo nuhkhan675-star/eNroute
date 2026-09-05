@@ -1,66 +1,42 @@
-import { createClient } from "@/lib/supabase/server";
-import type { Classification, ClassificationResult } from "@/lib/ai/classification";
-import type { FinalStrategy } from "@/lib/ai/schemas";
+import { getAllUniversityAnalysesForProfile } from "@/lib/db/analyses";
+import type { UniversityAnalysisRecord } from "@/lib/db/analyses";
 
 export interface DashboardMatchCard {
-  universityProgramId: string;
   universityId: string;
   universityName: string;
   city: string | null;
   countryName: string;
   photoUrl: string | null;
-  programDisplayName: string;
-  classification: Classification;
-  likelihoodRangeLabel: string;
-  confidence: ClassificationResult["confidence"];
-  narrativeSummary: string;
-  analyzedAt: string;
+  category: UniversityAnalysisRecord["category"];
+  chanceMin: number;
+  chanceMax: number;
+  confidence: UniversityAnalysisRecord["confidence"];
+  reasoning: string;
+  analyzedAt?: string;
 }
 
+const CATEGORY_ORDER: Record<UniversityAnalysisRecord["category"], number> = {
+  high_reach: 0,
+  reach: 1,
+  target: 2,
+  likely: 3,
+};
+
 export async function getDashboardMatches(profileId: string): Promise<DashboardMatchCard[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("ai_analyses")
-    .select(
-      `id, created_at, university_program_id, input_snapshot, output,
-       university_programs(id, display_name, universities(id, name, city, photo_url, countries(name)))`
-    )
-    .eq("profile_id", profileId)
-    .eq("analysis_type", "final_strategy")
-    .not("university_program_id", "is", null)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-
-  // One card per university_program_id -- keep only the most recent analysis.
-  const seen = new Set<string>();
-  const cards: DashboardMatchCard[] = [];
-  for (const row of (data ?? []) as any[]) {
-    if (seen.has(row.university_program_id)) continue;
-    seen.add(row.university_program_id);
-
-    const up = row.university_programs;
-    if (!up) continue;
-    const classification = row.input_snapshot?.classification as ClassificationResult | undefined;
-    const output = row.output as FinalStrategy;
-    if (!classification) continue;
-
-    cards.push({
-      universityProgramId: row.university_program_id,
-      universityId: up.universities.id,
-      universityName: up.universities.name,
-      city: up.universities.city,
-      photoUrl: up.universities.photo_url,
-      countryName: up.universities.countries?.name ?? "",
-      programDisplayName: up.display_name,
-      classification: classification.classification,
-      likelihoodRangeLabel: classification.likelihoodRangeLabel,
-      confidence: classification.confidence,
-      narrativeSummary: output.narrative,
-      analyzedAt: row.created_at,
-    });
-  }
-
-  const order: Record<Classification, number> = { reach: 0, target: 1, likely: 2 };
-  return cards.sort((a, b) => order[a.classification] - order[b.classification]);
+  const records = await getAllUniversityAnalysesForProfile(profileId);
+  return records
+    .map((r) => ({
+      universityId: r.universityId,
+      universityName: r.universityName,
+      city: r.city,
+      countryName: r.countryName,
+      photoUrl: r.photoUrl,
+      category: r.category,
+      chanceMin: r.chanceMin,
+      chanceMax: r.chanceMax,
+      confidence: r.confidence,
+      reasoning: r.reasoning,
+      analyzedAt: r.analyzedAt,
+    }))
+    .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category]);
 }
