@@ -75,7 +75,7 @@ export default async function Home() {
     const weaknesses = [...academic.weaknesses, ...extracurricular.weaknesses];
 
     return (
-      <div className="flex flex-1 flex-col overflow-x-hidden">
+      <div className="flex flex-1 flex-col overflow-x-clip">
         <section className="relative w-full px-6 py-20">
           <div
             className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[46rem] opacity-60"
@@ -168,7 +168,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-x-hidden">
+    <div className="flex flex-1 flex-col overflow-x-clip">
       {/* Scroll-scrubbed opening sequence: one pinned timeline the scrollbar
           scrubs, replacing the previous static hero. Everything below it is
           unchanged and resumes normal page flow. */}
