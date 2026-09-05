@@ -266,6 +266,8 @@ export interface UniversityForAnalysis {
   specialities: string[];
   programs: { displayName: string; categoryName: string }[];
   admissionStatistics: { year: number; acceptanceRate: number | null; level: "university" } | null;
+  /** Published score bands for admitted students -- what the student's own stats get compared against. */
+  requirements: { requirementType: string; description: string }[];
   globalRank: number | null;
 }
 
@@ -279,8 +281,14 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
   if (universityIds.length === 0) return map;
   const supabase = await createClient();
 
-  const [{ data: unis }, { data: programs }, { data: specialities }, { data: stats }, { data: rankings }] =
-    await Promise.all([
+  const [
+    { data: unis },
+    { data: programs },
+    { data: specialities },
+    { data: stats },
+    { data: rankings },
+    { data: requirements },
+  ] = await Promise.all([
       supabase.from("universities").select("id, name, city, photo_url, countries(name)").in("id", universityIds),
       supabase
         .from("university_programs")
@@ -301,6 +309,10 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
         .in("university_id", universityIds)
         .eq("ranking_type", "global")
         .order("ranking_year", { ascending: false }),
+      supabase
+        .from("university_admission_requirements")
+        .select("university_id, requirement_type, description")
+        .in("university_id", universityIds),
     ]);
 
   for (const u of (unis ?? []) as any[]) {
@@ -313,8 +325,13 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
       specialities: [],
       programs: [],
       admissionStatistics: null,
+      requirements: [],
       globalRank: null,
     });
+  }
+  for (const r of (requirements ?? []) as any[]) {
+    const entry = map.get(r.university_id);
+    if (entry) entry.requirements.push({ requirementType: r.requirement_type, description: r.description });
   }
   for (const p of (programs ?? []) as any[]) {
     const entry = map.get(p.university_id);

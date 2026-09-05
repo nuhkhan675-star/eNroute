@@ -13,6 +13,8 @@ export interface UniversityToAnalyze {
   specialities: string[];
   /** Real programs on record at this university, if any -- descriptive context only. */
   knownPrograms: string[];
+  /** Published score bands for admitted students, if we have them on record. */
+  requirements: string[];
 }
 
 const SYSTEM_PROMPT = `You are the University Fit Analyst inside a university admissions advisory system.
@@ -32,10 +34,18 @@ admission" -- stick to describing fit, strengths, and gaps.
 
 Score "program_fit_score" (0-10) on how well the student's academic background, subject choices, and
 demonstrated interest align with this university's known specialities/programs and their own stated
-field of interest. Score "requirements_fit_score" (0-10) on how reasonable the profile looks for
-admission to a university of this type and selectivity in general -- we rarely have a formal
-requirements list at this grain, so lean on general subject/grade readiness for this kind of
-institution and say so in "gaps" rather than inventing a specific requirement.
+field of interest.
+
+Score "requirements_fit_score" (0-10) against the admitted-student score bands listed for that
+university where they are given. Those bands are the middle 50% of ADMITTED students, not a cutoff:
+scoring above the upper figure means the student is comfortably competitive on that measure, below
+the lower figure means they are behind most admits, and inside the band means they are typical.
+Where the student's own test scores are directly comparable, say so concretely in "strengths" or
+"gaps" -- e.g. that their score sits above or below that university's admitted range. Do not convert
+between different qualifications you cannot map reliably (an IB total is not an SAT score); if the
+student's qualification isn't comparable to the bands given, judge general readiness instead and say
+that the published bands weren't directly comparable. Where no bands are listed for a university,
+lean on general subject/grade readiness and say so in "gaps" rather than inventing a requirement.
 
 For "candidate_scholarships": leave this empty unless you were explicitly given real scholarship data
 for this university -- never invent one, its amount, or its criteria.
@@ -68,7 +78,10 @@ Name: ${u.universityName}
 
 Known for (specialities): ${u.specialities.length > 0 ? u.specialities.join(", ") : "Not recorded"}
 
-Real programs on record: ${u.knownPrograms.length > 0 ? u.knownPrograms.join(", ") : "None recorded -- do not assume a specific program exists"}`
+Real programs on record: ${u.knownPrograms.length > 0 ? u.knownPrograms.join(", ") : "None recorded -- do not assume a specific program exists"}
+
+Admitted-student score bands (FACT, from our database):
+${u.requirements.length > 0 ? u.requirements.map((r) => `- ${r}`).join("\n") : "None recorded -- do not assume any specific score requirement exists."}`
     )
     .join("\n\n");
 

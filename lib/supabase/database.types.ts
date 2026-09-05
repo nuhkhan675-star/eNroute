@@ -1115,6 +1115,60 @@ export type Database = {
           },
         ]
       }
+      university_admission_requirements: {
+        Row: {
+          created_at: string
+          data_source_id: string | null
+          data_year: number | null
+          description: string
+          id: string
+          last_verified_at: string | null
+          max_value: number | null
+          min_value: number | null
+          requirement_type: string
+          university_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_source_id?: string | null
+          data_year?: number | null
+          description: string
+          id?: string
+          last_verified_at?: string | null
+          max_value?: number | null
+          min_value?: number | null
+          requirement_type: string
+          university_id: string
+        }
+        Update: {
+          created_at?: string
+          data_source_id?: string | null
+          data_year?: number | null
+          description?: string
+          id?: string
+          last_verified_at?: string | null
+          max_value?: number | null
+          min_value?: number | null
+          requirement_type?: string
+          university_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_admission_requirements_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "university_admission_requirements_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       university_admission_statistics: {
         Row: {
           acceptance_rate: number | null

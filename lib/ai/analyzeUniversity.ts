@@ -44,6 +44,7 @@ export async function analyzeUniversities(params: {
         universityName: d.name,
         specialities: d.specialities,
         knownPrograms: d.programs.map((p) => p.displayName),
+        requirements: d.requirements.map((r) => r.description),
       };
     });
 
@@ -78,7 +79,7 @@ export async function analyzeUniversities(params: {
         selectivity,
         {
           acceptanceRateLevel: detail.admissionStatistics ? "university" : null,
-          hasRequirementsOnRecord: false,
+          hasRequirementsOnRecord: detail.requirements.length > 0,
           hasCompleteProfile: profile.subjects.length > 0 && profile.extracurriculars.length > 0,
         }
       );
