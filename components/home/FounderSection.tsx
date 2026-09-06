@@ -13,14 +13,6 @@ export function FounderSection() {
           with clarity, not uncertainty.
         </p>
 
-        <blockquote className="mt-4 max-w-2xl">
-          <p className="text-2xl leading-snug font-semibold text-balance italic text-foreground sm:text-3xl">
-            <span className="text-primary">&ldquo;</span>You can&rsquo;t undo who you were, and you
-            can&rsquo;t reclaim what you lost. But always keep moving forward&mdash;everybody wishes
-            they could take back time.<span className="text-primary">&rdquo;</span>
-          </p>
-        </blockquote>
-
         {/* Rendered here rather than on the landing page alone, because this
             section already appears on both the signed-out and signed-in
             homepages -- so the note stays at the bottom after login too. */}
