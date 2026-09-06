@@ -29,10 +29,10 @@ export function FounderSection() {
           have thoughts on what works, what doesn&rsquo;t, or what&rsquo;s missing, I&rsquo;d genuinely
           appreciate hearing them &mdash; you can reach me at{" "}
           <a
-            href="mailto:nuhkhan675@gmail.com"
+            href="mailto:enrouteuniadvisor@gmail.com"
             className="text-primary underline-offset-4 hover:underline"
           >
-            nuhkhan675@gmail.com
+            enrouteuniadvisor@gmail.com
           </a>
           .
         </p>
