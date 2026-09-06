@@ -54,23 +54,91 @@ export interface ProfileDimensionScores {
 // achievement are the smallest weights since they're the most subjective
 // and most prone to inflation. These weights are fixed and apply to every
 // student/university pair -- there is no per-university tuning.
-const WEIGHTS = {
+export interface DimensionWeights {
+  academic: number;
+  requirementsFit: number;
+  programFit: number;
+  extracurricular: number;
+  leadership: number;
+  achievement: number;
+}
+
+/** US-style holistic review, and the fallback for any country without a profile. */
+const DEFAULT_WEIGHTS: DimensionWeights = {
   academic: 0.3,
   requirementsFit: 0.25,
   programFit: 0.2,
   extracurricular: 0.15,
   leadership: 0.05,
   achievement: 0.05,
-} as const;
+};
 
-function computeCompositeScore(s: ProfileDimensionScores): number {
+/**
+ * Real, documented differences in how each admissions system evaluates
+ * applicants. Applied identically to every university in that country -- this
+ * is a country-level model, never a per-school override.
+ *
+ * A single global weighting could not express the thing that most distinguishes
+ * these systems: a student with excellent grades and no extracurriculars is a
+ * strong candidate in Australia and a weak one in the US, and the engine
+ * previously scored them the same in both.
+ *
+ * Country keys must match countries.name exactly as seeded -- a mismatch falls
+ * through to DEFAULT_WEIGHTS silently. Verified against the live table: the
+ * app supports Australia, Hong Kong, India, Singapore, the United Kingdom and
+ * the United States, and the last uses the default.
+ *
+ * - United Kingdom (UCAS): overwhelmingly grades and subject fit. The personal
+ *   statement carries far less weight than a US application and
+ *   extracurriculars are minor.
+ * - Australia (ATAR-based direct entry): standard entry is a near-pure grades
+ *   cutoff. Extracurriculars are essentially irrelevant to it, mattering only
+ *   for separate equity and scholarship schemes this app does not model.
+ * - Singapore (NUS/NTU/SMU): driven by each university's published Indicative
+ *   Grade Profile. CCA and leadership are real but secondary -- more than
+ *   Australia, well short of the US.
+ * - Hong Kong (JUPAS): the HKDSE score against a programme's indicative
+ *   admission score is the primary gate. The Student Learning Profile is real
+ *   but secondary, much like Singapore.
+ * - India: admission to the institutions this app can meaningfully assess
+ *   (IITs, NITs and similar, via JoSAA) is a strict RANK-VERSUS-CUTOFF
+ *   decision, not a holistic score at all. Extracurriculars play effectively no
+ *   role. Treat this profile as an approximation: a weighted composite is the
+ *   wrong shape for that system, and these weights only make it lean the right
+ *   way rather than model it faithfully.
+ */
+const COUNTRY_WEIGHTS: Record<string, DimensionWeights> = {
+  "United Kingdom": { academic: 0.4, requirementsFit: 0.35, programFit: 0.15, extracurricular: 0.06, leadership: 0.02, achievement: 0.02 },
+  Australia: { academic: 0.55, requirementsFit: 0.3, programFit: 0.1, extracurricular: 0.03, leadership: 0.01, achievement: 0.01 },
+  Singapore: { academic: 0.42, requirementsFit: 0.28, programFit: 0.16, extracurricular: 0.09, leadership: 0.03, achievement: 0.02 },
+  "Hong Kong": { academic: 0.42, requirementsFit: 0.3, programFit: 0.15, extracurricular: 0.08, leadership: 0.03, achievement: 0.02 },
+  India: { academic: 0.55, requirementsFit: 0.35, programFit: 0.06, extracurricular: 0.02, leadership: 0.01, achievement: 0.01 },
+};
+
+// Every profile must sum to 1, or that country's composites are silently
+// scaled wrong for every student. Checked at module load so a typo fails
+// immediately and loudly rather than skewing predictions unnoticed.
+for (const [country, w] of Object.entries({ Default: DEFAULT_WEIGHTS, ...COUNTRY_WEIGHTS })) {
+  const total = w.academic + w.requirementsFit + w.programFit + w.extracurricular + w.leadership + w.achievement;
+  // Float arithmetic, so compare with a tolerance rather than to exactly 1.
+  if (Math.abs(total - 1) > 1e-9) {
+    throw new Error(`Dimension weights for "${country}" sum to ${total}, not 1.`);
+  }
+}
+
+/** Falls back to the default profile for any country without its own. */
+export function resolveWeights(countryName: string | null | undefined): DimensionWeights {
+  return (countryName ? COUNTRY_WEIGHTS[countryName] : undefined) ?? DEFAULT_WEIGHTS;
+}
+
+function computeCompositeScore(s: ProfileDimensionScores, weights: DimensionWeights): number {
   const composite =
-    s.academicScore * WEIGHTS.academic +
-    s.requirementsFitScore * WEIGHTS.requirementsFit +
-    s.programFitScore * WEIGHTS.programFit +
-    s.extracurricularScore * WEIGHTS.extracurricular +
-    s.leadershipScore * WEIGHTS.leadership +
-    s.achievementScore * WEIGHTS.achievement;
+    s.academicScore * weights.academic +
+    s.requirementsFitScore * weights.requirementsFit +
+    s.programFitScore * weights.programFit +
+    s.extracurricularScore * weights.extracurricular +
+    s.leadershipScore * weights.leadership +
+    s.achievementScore * weights.achievement;
   return Math.max(0, Math.min(100, composite));
 }
 
@@ -218,9 +286,12 @@ export interface AdmissionPrediction {
 export function computeAdmissionPrediction(
   scores: ProfileDimensionScores,
   selectivity: SelectivityResult,
-  confidenceInput: Omit<ConfidenceInput, "selectivityBasis">
+  confidenceInput: Omit<ConfidenceInput, "selectivityBasis">,
+  /** Selects the country's weighting profile. Null falls back to the default. */
+  countryName?: string | null
 ): AdmissionPrediction {
-  const composite = computeCompositeScore(scores);
+  const weights = resolveWeights(countryName);
+  const composite = computeCompositeScore(scores, weights);
   // Prefer the school's real published rate when we have one; fall back to the
   // tier band only for rank_proxy / ai_estimate / unknown, where there is no
   // real number to anchor to.
@@ -232,7 +303,25 @@ export function computeAdmissionPrediction(
   const halfWidth = RANGE_HALF_WIDTH[confidence];
 
   const chanceMin = Math.max(0, Math.round(midpoint - halfWidth));
-  const chanceMax = Math.min(100, Math.round(midpoint + halfWidth));
+  let chanceMax = Math.min(100, Math.round(midpoint + halfWidth));
+
+  // A weak profile at a school with a REAL published rate gets its midpoint
+  // pushed below that rate on purpose (see midpointFromRealRate -- downward
+  // shifts apply at full strength). But the range around the midpoint is
+  // symmetric, and a weak profile also carries lower confidence and therefore a
+  // wider half-width, so chanceMax could land back ABOVE the school's own
+  // average -- quietly undoing the correction and leaving the optimistic end of
+  // the range reading like a real shot.
+  //
+  // Clamp the top of the range to the rate itself in that case. It binds only
+  // when the midpoint is genuinely below the rate AND the half-width would
+  // otherwise carry the top back over it, so it corrects an overstatement
+  // rather than compressing every range toward the rate. A midpoint at or
+  // above the rate is the strong-profile case and is left alone: topping out
+  // above the school's average is correct there.
+  if (selectivity.basis === "acceptance_rate" && selectivity.rate != null && midpoint < selectivity.rate) {
+    chanceMax = Math.min(chanceMax, Math.round(selectivity.rate));
+  }
 
   return {
     chanceMin,

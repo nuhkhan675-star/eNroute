@@ -4,6 +4,7 @@ import { runUniversityFitAnalystBatch, type UniversityToAnalyze } from "@/lib/ai
 import { getSelectivityTier } from "@/lib/ai/prediction/selectivity";
 import {
   computeAdmissionPrediction,
+  resolveWeights,
   PREDICTION_MODEL_VERSION,
   PROGRAM_ANALYSIS_BATCH_SIZE,
 } from "@/lib/ai/prediction/scoringEngine";
@@ -106,7 +107,19 @@ export async function analyzeUniversities(params: {
           acceptanceRateLevel: detail.admissionStatistics ? "university" : null,
           hasRequirementsOnRecord: detail.requirements.length > 0,
           hasCompleteProfile: profile.subjects.length > 0 && profile.extracurriculars.length > 0,
-        }
+        },
+        // Selects the country's weighting profile -- see COUNTRY_WEIGHTS.
+        detail.countryName
+      );
+
+      // Backend-only provenance for the scoring itself: which country profile
+      // was applied and its six values. Logged rather than stored on the
+      // record, so it cannot leak into any client payload -- the student sees
+      // the category, range, confidence and reasoning, never the weights or
+      // the composite behind them.
+      const weightsUsed = resolveWeights(detail.countryName);
+      console.log(
+        `[scoring] ${detail.name} (${detail.countryName || "default"}) weights=${JSON.stringify(weightsUsed)} composite=${prediction.competitivenessComposite}`
       );
 
       const record: UniversityAnalysisRecord = {
