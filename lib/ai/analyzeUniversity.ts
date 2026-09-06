@@ -2,6 +2,7 @@ import { getUniversitiesForAnalysis } from "@/lib/db/universities";
 import { saveUniversityAnalysis, type UniversityAnalysisRecord } from "@/lib/db/analyses";
 import { runUniversityFitAnalystBatch, type UniversityToAnalyze } from "@/lib/ai/agents/universityFitAnalyst";
 import { getSelectivityTier } from "@/lib/ai/prediction/selectivity";
+import { computeUcasTariffPoints, compareToTariffBand } from "@/lib/ai/prediction/ucasTariff";
 import {
   computeAdmissionPrediction,
   resolveWeights,
@@ -39,6 +40,13 @@ export async function analyzeUniversities(params: {
   const { profile, academic, extracurricular, universityIds } = params;
   if (universityIds.length === 0) return [];
 
+  // UCAS Tariff is only meaningful for A-levels. Computed once for the whole
+  // run, since it depends on the student, not the university.
+  const tariffPoints =
+    profile.curriculum?.code === "A_LEVELS"
+      ? computeUcasTariffPoints(profile.subjects.map((s) => s.grade))
+      : null;
+
   const details = await getUniversitiesForAnalysis(universityIds);
   const validIds = universityIds.filter((id) => details.has(id));
 
@@ -54,6 +62,11 @@ export async function analyzeUniversities(params: {
         specialities: d.specialities,
         knownPrograms: d.programs.map((p) => p.displayName),
         requirements: d.requirements.map((r) => r.description),
+        // The comparison is done HERE, in code, and only its RESULT is given to
+        // the model. Handing over raw points and asking it to judge fit would
+        // put a deterministic arithmetic decision back in the model's hands,
+        // which is exactly what the prediction engine exists to avoid.
+        tariffAssessment: buildTariffAssessment(tariffPoints, d.requirements),
         // Eligibility for an AI estimate is decided HERE, from real data,
         // before the model is called -- never by the model itself. Only a
         // university with no published rate and no ranking is offered up,
@@ -168,6 +181,36 @@ export async function analyzeUniversities(params: {
   }
 
   return results;
+}
+
+/**
+ * States, as a fact, where the student's UCAS Tariff total sits against a
+ * university's published band. Returns null when either side is missing, so
+ * the model is told nothing rather than something speculative.
+ */
+function buildTariffAssessment(
+  points: number | null,
+  requirements: { requirementType: string; minValue: number | null; maxValue: number | null }[]
+): string | null {
+  if (points == null) return null;
+  const band = requirements.find((r) => r.requirementType === "ucas_tariff");
+  if (!band) return null;
+
+  const standing = compareToTariffBand(points, band.minValue, band.maxValue);
+  if (!standing) return null;
+
+  const range =
+    band.minValue != null && band.maxValue != null
+      ? `${band.minValue}-${band.maxValue}`
+      : String(band.minValue ?? band.maxValue);
+
+  const verdict = {
+    above: "above the published band, so comfortably competitive on this measure",
+    within: "inside the published band, so typical of admitted students on this measure",
+    below: "below the published band, so behind most admitted students on this measure",
+  }[standing];
+
+  return `The student's A-levels total ${points} UCAS Tariff points. This university's published band for admitted students is ${range}. The student is ${verdict}. This comparison has already been computed -- state it, do not recalculate it.`;
 }
 
 // Single-university convenience wrapper (used by the "Analyze My Chances"

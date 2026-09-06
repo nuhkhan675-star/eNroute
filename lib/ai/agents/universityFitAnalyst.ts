@@ -22,6 +22,13 @@ export interface UniversityToAnalyze {
    * so the model can never talk its way into overriding a real figure.
    */
   needsAcceptanceRateEstimate: boolean;
+  /**
+   * A pre-computed statement of how the student's UCAS Tariff total compares
+   * to this university's published band. Null when the student is not on
+   * A-levels or the university has no band on record. The comparison is
+   * arithmetic and is done in code -- the model reports it, never redoes it.
+   */
+  tariffAssessment?: string | null;
 }
 
 const SYSTEM_PROMPT = `You are the University Fit Analyst inside a university admissions advisory system.
@@ -44,7 +51,12 @@ demonstrated interest align with this university's known specialities/programs a
 field of interest.
 
 Score "requirements_fit_score" (0-10) against the admitted-student score bands listed for that
-university where they are given. Those bands are the middle 50% of ADMITTED students, not a cutoff:
+university where they are given.
+
+Where a UCAS Tariff comparison is supplied, it has already been calculated for you against this
+university's published band. Use its verdict directly and reflect it in "requirements_fit_score" and
+in "strengths" or "gaps" -- do not recompute the points, convert grades yourself, or second-guess
+which side of the band the student falls on. Those bands are the middle 50% of ADMITTED students, not a cutoff:
 scoring above the upper figure means the student is comfortably competitive on that measure, below
 the lower figure means they are behind most admits, and inside the band means they are typical.
 Where the student's own test scores are directly comparable, say so concretely in "strengths" or
@@ -115,7 +127,9 @@ Real programs on record: ${u.knownPrograms.length > 0 ? u.knownPrograms.join(", 
 Admitted-student score bands (FACT, from our database):
 ${u.requirements.length > 0 ? u.requirements.map((r) => `- ${r}`).join("\n") : "None recorded -- do not assume any specific score requirement exists."}
 
-Selectivity data on record: ${u.needsAcceptanceRateEstimate ? "NONE -- NO SELECTIVITY DATA ON RECORD. You may estimate estimated_acceptance_rate for this university, or return null if you do not genuinely know it." : "Yes, real data already held -- return null for estimated_acceptance_rate."}`
+Selectivity data on record: ${u.needsAcceptanceRateEstimate ? "NONE -- NO SELECTIVITY DATA ON RECORD. You may estimate estimated_acceptance_rate for this university, or return null if you do not genuinely know it." : "Yes, real data already held -- return null for estimated_acceptance_rate."}
+
+UCAS Tariff comparison (ALREADY COMPUTED, treat as fact): ${u.tariffAssessment ?? "Not applicable -- the student is not on A-levels, or this university has no published tariff band on record."}`
     )
     .join("\n\n");
 

@@ -402,7 +402,13 @@ export interface UniversityForAnalysis {
   programs: { displayName: string; categoryName: string }[];
   admissionStatistics: { year: number; acceptanceRate: number | null; level: "university" } | null;
   /** Published score bands for admitted students -- what the student's own stats get compared against. */
-  requirements: { requirementType: string; description: string }[];
+  requirements: {
+    requirementType: string;
+    description: string;
+    /** 25th-75th percentile band for admitted students -- never a hard cutoff. */
+    minValue: number | null;
+    maxValue: number | null;
+  }[];
   globalRank: number | null;
 }
 
@@ -446,7 +452,7 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
         .order("ranking_year", { ascending: false }),
       supabase
         .from("university_admission_requirements")
-        .select("university_id, requirement_type, description")
+        .select("university_id, requirement_type, description, min_value, max_value")
         .in("university_id", universityIds),
     ]);
 
@@ -466,7 +472,14 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
   }
   for (const r of (requirements ?? []) as any[]) {
     const entry = map.get(r.university_id);
-    if (entry) entry.requirements.push({ requirementType: r.requirement_type, description: r.description });
+    if (entry) {
+      entry.requirements.push({
+        requirementType: r.requirement_type,
+        description: r.description,
+        minValue: r.min_value ?? null,
+        maxValue: r.max_value ?? null,
+      });
+    }
   }
   for (const p of (programs ?? []) as any[]) {
     const entry = map.get(p.university_id);
