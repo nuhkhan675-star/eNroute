@@ -11,6 +11,15 @@ import { PROGRAM_ANALYSIS_BATCH_SIZE } from "@/lib/ai/prediction/scoringEngine";
 // Ordered most-accessible first, so the feed reads Likely -> Target -> Reach
 // -> High Reach. buildShortlist() picks across every one of these tiers, so a
 // student sees the whole spectrum rather than 20 schools from one end of it.
+// Same accents as the card badges, so a heading and the cards under it read as
+// one group rather than two unrelated elements.
+const GROUP_ACCENT: Record<string, string> = {
+  likely: "bg-emerald-400",
+  target: "bg-blue-400",
+  reach: "bg-orange-400",
+  high_reach: "bg-red-400",
+};
+
 const GROUPS = [
   { key: "likely" as const, title: "Likely", description: "You appear substantially above the competitive threshold." },
   { key: "target" as const, title: "Target", description: "You appear reasonably competitive relative to the available evidence." },
@@ -141,7 +150,10 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
         if (groupMatches.length === 0) return null;
         return (
           <div key={group.key}>
-            <h2 className="text-lg font-medium">{group.title}</h2>
+            <h2 className="flex items-center gap-2 text-lg font-medium">
+              <span className={`size-2 rounded-full ${GROUP_ACCENT[group.key]}`} aria-hidden />
+              {group.title}
+            </h2>
             <p className="text-sm text-muted-foreground">{group.description}</p>
             <div className="mt-3 flex flex-col gap-3">
               {groupMatches.map((m) => (

@@ -71,7 +71,9 @@ export default async function DashboardPage() {
       <div className="mt-6 grid grid-cols-3 gap-3">
         <Card>
           <CardContent className="flex flex-col gap-1 py-4">
-            <TrendingUp className="size-4 text-primary" />
+            <span className="inline-flex size-7 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+              <TrendingUp className="size-4" />
+            </span>
             <span className="text-lg font-semibold">
               {profile.profileStrength != null ? `${profile.profileStrength.toFixed(1)}/10` : "—"}
             </span>
@@ -80,7 +82,9 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardContent className="flex flex-col gap-1 py-4">
-            <Search className="size-4 text-primary" />
+            <span className="inline-flex size-7 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300">
+              <Search className="size-4" />
+            </span>
             <span className="text-lg font-semibold">{recommended.length}</span>
             <span className="text-xs text-muted-foreground">Matches found</span>
           </CardContent>
@@ -88,7 +92,9 @@ export default async function DashboardPage() {
         <Link href="/saved">
           <Card className="h-full transition-colors hover:border-primary/40">
             <CardContent className="flex flex-col gap-1 py-4">
-              <Bookmark className="size-4 text-primary" />
+              <span className="inline-flex size-7 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                <Bookmark className="size-4" />
+              </span>
               <span className="text-lg font-semibold">{saved.length}</span>
               <span className="text-xs text-muted-foreground">Saved schools</span>
             </CardContent>

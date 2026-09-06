@@ -30,19 +30,26 @@ function randomGreeting(templates: ((name: string) => string)[], name: string): 
   return templates[Math.floor(Math.random() * templates.length)](name);
 }
 
+// Each pillar carries its own accent. Three identical blue icons read as one
+// block; distinct hues let the eye pick out the one it wants. All three are
+// drawn from the accent set already used for the Reach/Target/Likely badges,
+// so nothing new enters the palette.
 const PILLARS = [
   {
     icon: Database,
+    tone: "text-sky-300 bg-sky-400/10 ring-sky-400/20",
     title: "Built on real data",
     body: "University, program, tuition, and admissions facts come from a structured database with sources and verification dates — never invented.",
   },
   {
     icon: Brain,
+    tone: "text-violet-300 bg-violet-400/10 ring-violet-400/20",
     title: "AI that explains, not guesses",
     body: "Specialist analysts evaluate your academics, activities, and major fit. Classification into Reach, Target, or Likely is computed, not improvised.",
   },
   {
     icon: MessageCircle,
+    tone: "text-emerald-300 bg-emerald-400/10 ring-emerald-400/20",
     title: "An advisor that knows your profile",
     body: "Every estimate comes with the reasoning behind it — strengths, gaps, and what to do next, tied to that specific university rather than generic advice.",
   },
@@ -185,7 +192,9 @@ export default async function Home() {
               className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 transition-colors hover:border-primary/40"
             >
               <div className="pointer-events-none absolute -top-16 -right-16 size-40 rounded-full bg-primary/10 blur-3xl transition-opacity group-hover:opacity-100 opacity-0" />
-              <p.icon className="size-8 text-primary" strokeWidth={1.75} />
+              <span className={`inline-flex size-12 items-center justify-center rounded-xl ring-1 ${p.tone}`}>
+                <p.icon className="size-6" strokeWidth={1.75} />
+              </span>
               <h2 className="mt-5 text-lg font-semibold">{p.title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
             </div>
