@@ -20,6 +20,18 @@ from public.curricula, unnest(array[
 where curricula.code = 'IB'
 on conflict (curriculum_id, name) do nothing;
 
+-- IB Language ab initio: a separate statement because these are SL-only. The
+-- block above hardcodes array['HL','SL'], which would have offered an HL that
+-- does not exist for these subjects.
+insert into public.subjects (curriculum_id, name, available_levels, grade_scale)
+select id, subj.name, array['SL'], '1-7'
+from public.curricula, unnest(array[
+  'French ab initio','Spanish ab initio','German ab initio','Mandarin ab initio',
+  'Italian ab initio','Japanese ab initio','Arabic ab initio'
+]) as subj(name)
+where curricula.code = 'IB'
+on conflict do nothing
+
 -- A Levels: no HL/SL, A*-E scale.
 insert into public.subjects (curriculum_id, name, available_levels, grade_scale)
 select id, subj.name, array[]::text[], 'A*-E'
