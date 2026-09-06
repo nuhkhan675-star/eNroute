@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { X } from "lucide-react";
+import { FieldHint } from "@/components/onboarding/FieldHint";
 
 const CATEGORY_LABELS: Record<string, string> = {
   sports: "Sports",
@@ -35,7 +36,6 @@ const emptyForm: {
   role: string;
   yearsInvolved: string;
   description: string;
-  achievements: string;
   impact: string;
 } = {
   activityName: "",
@@ -43,7 +43,6 @@ const emptyForm: {
   role: "",
   yearsInvolved: "",
   description: "",
-  achievements: "",
   impact: "",
 };
 
@@ -58,6 +57,9 @@ export function StepExtracurriculars({ onNext, onBack }: Props) {
   const removeExtracurricular = useOnboardingStore((s) => s.removeExtracurricular);
 
   const [form, setForm] = useState(emptyForm);
+  // Detail fields start hidden. Most students add two or three activities, and
+  // seven inputs each -- three of them textareas -- was the whole complaint.
+  const [showDetail, setShowDetail] = useState(false);
 
   const canAdd = form.activityName.trim() && form.category;
 
@@ -69,7 +71,6 @@ export function StepExtracurriculars({ onNext, onBack }: Props) {
       role: form.role || undefined,
       yearsInvolved: form.yearsInvolved ? Number(form.yearsInvolved) : undefined,
       description: form.description || undefined,
-      achievements: form.achievements || undefined,
       impact: form.impact || undefined,
     });
     setForm(emptyForm);
@@ -80,8 +81,7 @@ export function StepExtracurriculars({ onNext, onBack }: Props) {
       <CardHeader>
         <CardTitle>Extracurricular activities</CardTitle>
         <CardDescription>
-          Add each activity that matters — we evaluate leadership, commitment, impact, and
-          relevance to your intended program, not just how many you list.
+          Quality over quantity — two or three you actually care about beat a long list.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -117,7 +117,7 @@ export function StepExtracurriculars({ onNext, onBack }: Props) {
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label>Activity name</Label>
+              <Label>Activity</Label>
               <Input
                 value={form.activityName}
                 onChange={(e) => setForm((f) => ({ ...f, activityName: e.target.value }))}
@@ -145,55 +145,74 @@ export function StepExtracurriculars({ onNext, onBack }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label>Role</Label>
-              <Input
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                placeholder="e.g. Team Captain"
-              />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between">
+              <Label>What did you do or achieve?</Label>
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {form.impact.length}/200
+              </span>
             </div>
-            <div className="flex flex-col gap-2">
-              <Label>Years involved</Label>
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                step={0.5}
-                value={form.yearsInvolved}
-                onChange={(e) => setForm((f) => ({ ...f, yearsInvolved: e.target.value }))}
-              />
-            </div>
+            <Input
+              value={form.impact}
+              maxLength={200}
+              onChange={(e) => setForm((f) => ({ ...f, impact: e.target.value }))}
+              placeholder="e.g. Led a 12-person team to 2nd nationally"
+            />
+            <FieldHint
+              items={[
+                "A position you held — captain, president, founder",
+                "A result worth naming — placement, award, selection rate",
+                "Scale — people involved, hours, money raised, audience reached",
+                "How long you stuck with it",
+                "Anything that ties it to what you want to study",
+              ]}
+            />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label>Description</Label>
-            <Textarea
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="What did you actually do?"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label>Achievements / awards</Label>
-            <Textarea
-              value={form.achievements}
-              onChange={(e) => setForm((f) => ({ ...f, achievements: e.target.value }))}
-              placeholder="Any recognitions, rankings, selectivity"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label>Impact</Label>
-            <Textarea
-              value={form.impact}
-              onChange={(e) => setForm((f) => ({ ...f, impact: e.target.value }))}
-              placeholder="What changed because of this activity?"
-            />
-          </div>
+          {!showDetail ? (
+            <button
+              type="button"
+              onClick={() => setShowDetail(true)}
+              className="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-4"
+            >
+              Add more detail (optional)
+            </button>
+          ) : (
+            <div className="border-border flex flex-col gap-3 border-l-2 pl-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label>Role</Label>
+                  <Input
+                    value={form.role}
+                    onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                    placeholder="e.g. Team Captain"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Years involved</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    value={form.yearsInvolved}
+                    onChange={(e) => setForm((f) => ({ ...f, yearsInvolved: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Anything else worth knowing</Label>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Only if it adds something the line above doesn't"
+                />
+              </div>
+            </div>
+          )}
 
           <Button type="button" variant="secondary" onClick={handleAdd} disabled={!canAdd}>
-            + Add another activity
+            + Add activity
           </Button>
         </div>
 
