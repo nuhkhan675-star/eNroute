@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
+import { notifyNewSignup } from "@/lib/notifications/newUser";
 
 /** Where password-reset and magic-link emails send people back to. */
 function siteUrl(): string {
@@ -37,6 +38,11 @@ export async function signUpWithPassword(formData: FormData): Promise<AuthResult
     options: { data: { full_name: name } },
   });
   if (error) return { error: error.message };
+
+  // Fire-and-forget: awaited so it actually runs before the serverless
+  // invocation ends, but it can never fail the signup -- notifyNewSignup
+  // swallows its own errors.
+  await notifyNewSignup({ name, email });
 
   if (data.session) {
     redirect("/onboarding");
