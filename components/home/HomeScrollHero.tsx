@@ -88,8 +88,9 @@ function buildScenes(primaryHref: string, greeting: string | null): Scene[] {
           ))}
         </div>
         <p className="text-muted-foreground mt-6 max-w-xl text-sm sm:text-base">
-          Where a university publishes its admissions figures, that is the number your chances are
-          built on. Where it does not, we say so on the card instead of quietly filling the gap.
+          If a university publishes its admissions numbers, those are the numbers behind your
+          chances. If it doesn&apos;t, we label the figure as our estimate. We never pass a guess off
+          as a fact.
         </p>
       </>
     ),
