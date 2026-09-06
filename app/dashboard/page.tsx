@@ -34,12 +34,22 @@ export default async function DashboardPage() {
   // concurrency, without blocking this page load. Anything outside the
   // shortlist is still analyzable on demand from its own page or the search
   // panel.
-  const pending =
+  const shortlist =
     profile.profileStrength != null && profile.fieldOfInterest
       ? buildShortlist(await getRelevantUniversities(profile.fieldOfInterest.id, profile.targetCountryIds))
-          .filter((r) => !matches.some((m) => m.universityId === r.universityId))
-          .map((r) => r.universityId)
       : [];
+  const shortlistIds = new Set(shortlist.map((r) => r.universityId));
+
+  const pending = shortlist
+    .filter((r) => !matches.some((m) => m.universityId === r.universityId))
+    .map((r) => r.universityId);
+
+  // The recommended feed is the SHORTLIST, not every analysis on file. A
+  // university the student looked up themselves is stored (so searching it
+  // again is instant and free) but it was never something we put forward, and
+  // leaving it in the feed made one-off lookups accumulate as permanent
+  // "recommendations".
+  const recommended = matches.filter((m) => shortlistIds.has(m.universityId));
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -71,7 +81,7 @@ export default async function DashboardPage() {
         <Card>
           <CardContent className="flex flex-col gap-1 py-4">
             <Search className="size-4 text-primary" />
-            <span className="text-lg font-semibold">{matches.length}</span>
+            <span className="text-lg font-semibold">{recommended.length}</span>
             <span className="text-xs text-muted-foreground">Matches found</span>
           </CardContent>
         </Card>
@@ -116,7 +126,7 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <DashboardMatchesQueue
-          initialMatches={matches}
+          initialMatches={recommended}
           pending={pending}
           savedUniversityIds={saved.map((s) => s.universityId)}
         />

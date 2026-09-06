@@ -25,21 +25,15 @@ const CATEGORY_ORDER: Record<UniversityAnalysisRecord["category"], number> = {
 };
 
 /**
- * The recommended feed. Deliberately limited to universities backed by a real
- * published acceptance rate or a world ranking.
- *
- * Analyses resting on a model estimate are still computed, stored and shown
- * wherever the student asked for that specific school -- search, the
- * university's own page -- with the estimate labelled. They are just not
- * surfaced as recommendations, because a suggestion the system cannot evidence
- * carries the same visual weight as one it can, and that is the part that
- * misleads. Older estimate-based rows already in the table are filtered here
- * rather than deleted, so nothing the student previously looked at is lost.
+ * Every analysis for the profile, evidenced and estimated alike, each carrying
+ * its selectivityBasis. The split is made in the UI rather than here: matches
+ * backed by a published rate or a ranking are shown by default, and the rest
+ * sit behind an explicit control, so a student can still reach them without
+ * estimates quietly carrying the same visual weight as real data.
  */
 export async function getDashboardMatches(profileId: string): Promise<DashboardMatchCard[]> {
   const records = await getAllUniversityAnalysesForProfile(profileId);
   return records
-    .filter((r) => r.selectivityBasis === "acceptance_rate" || r.selectivityBasis === "rank_proxy")
     .map((r) => ({
       universityId: r.universityId,
       universityName: r.universityName,

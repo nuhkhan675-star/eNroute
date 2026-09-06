@@ -176,9 +176,14 @@ export default async function UniversitiesPage({
       matches = await getDashboardMatches(profile.id);
       if (profile.fieldOfInterest) {
         const relevant = await getRelevantUniversities(profile.fieldOfInterest.id, profile.targetCountryIds);
-        pending = buildShortlist(relevant)
+        const shortlist = buildShortlist(relevant);
+        const shortlistIds = new Set(shortlist.map((r) => r.universityId));
+        pending = shortlist
           .filter((r) => !matches.some((m) => m.universityId === r.universityId))
           .map((r) => r.universityId);
+        // Same rule as the dashboard: recommend the shortlist, not every
+        // analysis the student has ever triggered by searching.
+        matches = matches.filter((m) => shortlistIds.has(m.universityId));
       }
     }
   }

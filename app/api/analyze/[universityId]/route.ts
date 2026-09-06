@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { ensureGeneralAnalyses } from "@/lib/ai/orchestrator";
 import { analyzeUniversity } from "@/lib/ai/analyzeUniversity";
+import { getUniversityAnalysis } from "@/lib/db/analyses";
 import { friendlyAnalysisError } from "@/lib/ai/client";
 
 export async function POST(
@@ -18,6 +19,20 @@ export async function POST(
 
   const profile = await getProfileByUserId(user.id);
   if (!profile) return NextResponse.json({ error: "No profile found. Complete onboarding first." }, { status: 404 });
+
+  // Cache check BEFORE any AI call. This route previously went straight to
+  // analyzeUniversity and only upserted afterwards, so searching the same
+  // university five times cost five full analyses and overwrote the row each
+  // time. The stored result is per (profile, university), so a repeat search --
+  // today, tomorrow, or after navigating away -- returns instantly and free.
+  //
+  // ?refresh=1 forces a re-run, for when a profile has changed and the cached
+  // result is stale.
+  const forceRefresh = _request.nextUrl.searchParams.get("refresh") === "1";
+  if (!forceRefresh) {
+    const cached = await getUniversityAnalysis(profile.id, universityId);
+    if (cached) return NextResponse.json(cached);
+  }
 
   try {
     const { academic, extracurricular } = await ensureGeneralAnalyses(profile);

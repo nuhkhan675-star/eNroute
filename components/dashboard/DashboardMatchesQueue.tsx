@@ -5,6 +5,7 @@ import type { DashboardMatchCard } from "@/lib/db/dashboard";
 import type { UniversityAnalysisRecord } from "@/lib/db/analyses";
 import { UniversityMatchCard } from "@/components/dashboard/UniversityMatchCard";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { PROGRAM_ANALYSIS_BATCH_SIZE } from "@/lib/ai/prediction/scoringEngine";
 
 // Ordered most-accessible first, so the feed reads Likely -> Target -> Reach
@@ -42,6 +43,11 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
   const [matches, setMatches] = useState(initialMatches);
   const [pendingCount, setPendingCount] = useState(pending.length);
   const [statusIndex, setStatusIndex] = useState(0);
+  // Estimate-backed matches are hidden by default so they don't sit alongside
+  // real published rates as if they carried the same weight -- but they are
+  // one click away, because for some country combinations there are only a
+  // dozen or so universities with any published data at all.
+  const [showEstimated, setShowEstimated] = useState(false);
   const started = useRef(false);
 
   useEffect(() => {
@@ -106,6 +112,12 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
     for (let i = 0; i < CONCURRENCY; i++) worker();
   }, [pending]);
 
+  const isEvidenced = (m: DashboardMatchCard) =>
+    m.selectivityBasis === "acceptance_rate" || m.selectivityBasis === "rank_proxy";
+  const evidenced = matches.filter(isEvidenced);
+  const estimated = matches.filter((m) => !isEvidenced(m));
+  const visible = showEstimated ? matches : evidenced;
+
   return (
     <div className="mt-8 flex flex-col gap-8">
       {pendingCount > 0 && (
@@ -125,7 +137,7 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
         </p>
       )}
       {GROUPS.map((group) => {
-        const groupMatches = matches.filter((m) => m.category === group.key);
+        const groupMatches = visible.filter((m) => m.category === group.key);
         if (groupMatches.length === 0) return null;
         return (
           <div key={group.key}>
@@ -143,6 +155,21 @@ export function DashboardMatchesQueue({ initialMatches, pending, savedUniversity
           </div>
         );
       })}
+
+      {estimated.length > 0 && (
+        <div className="flex flex-col items-center gap-2 border-t border-border pt-6">
+          <Button variant="outline" onClick={() => setShowEstimated((v) => !v)}>
+            {showEstimated
+              ? "Hide estimated matches"
+              : `Show ${estimated.length} more with estimated selectivity`}
+          </Button>
+          <p className="max-w-md text-center text-xs text-muted-foreground">
+            {showEstimated
+              ? "Estimated matches are included below and labelled on each card."
+              : `We hold no published acceptance rate or world ranking for ${estimated.length === 1 ? "this university" : "these universities"}, so their selectivity is estimated rather than measured.`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
