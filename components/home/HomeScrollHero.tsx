@@ -41,10 +41,10 @@ const MARQUEE = [
 
 function buildScenes(primaryHref: string, greeting: string | null): Scene[] {
   return [
-  // 1. Opens ON the first statement rather than on a blank beat. Because this
-  //    scene owns the start of the timeline it holds at full opacity from
-  //    scroll 0, so the wordmark and the headline are the first thing seen --
-  //    an empty opening frame just read as a broken page.
+  // 1. Opens ON this statement. Because it owns the start of the timeline it
+  //    holds at full opacity from scroll 0, so the wordmark and the headline
+  //    are the first thing seen -- an empty opening frame read as a broken
+  //    page. Carries the personalised greeting the old opening scene had.
   {
     weight: 1.4,
     content: (
@@ -54,16 +54,6 @@ function buildScenes(primaryHref: string, greeting: string | null): Scene[] {
             {greeting}
           </span>
         ) : null}
-        <SerifHeadline lines={["You are not short of opinions.", "You are short of evidence."]} />
-      </>
-    ),
-  },
-
-  // 3. Crossfades into the second statement, with the countries beneath.
-  {
-    weight: 1.2,
-    content: (
-      <>
         <SerifHeadline lines={["Published rates. Named sources.", "Six countries."]} />
         <p className="text-muted-foreground mt-3 text-xs tracking-[0.2em] uppercase sm:text-sm">
           {COUNTRIES}
