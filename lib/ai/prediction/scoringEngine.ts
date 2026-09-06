@@ -333,6 +333,48 @@ export function computeAdmissionPrediction(
   };
 }
 
+/**
+ * Recomputes just the range and category for an ALREADY-ANALYSED university,
+ * from the dimension scores stored on its row.
+ *
+ * The six dimension scores come from the model and do not depend on the
+ * weighting profile; only the composite built from them does. So a change to
+ * COUNTRY_WEIGHTS can be applied to existing analyses arithmetically, with no
+ * further AI calls -- which is the difference between re-scoring the catalogue
+ * for nothing and paying for a full re-analysis of every row.
+ *
+ * Confidence is passed in rather than recomputed: it depends on data-coverage
+ * inputs that are not stored on the row, and weights do not affect it.
+ */
+export function recomputePrediction(
+  scores: ProfileDimensionScores,
+  selectivity: SelectivityResult,
+  confidence: PredictionConfidence,
+  countryName?: string | null
+): Pick<AdmissionPrediction, "chanceMin" | "chanceMax" | "category" | "midpoint" | "competitivenessComposite"> {
+  const composite = computeCompositeScore(scores, resolveWeights(countryName));
+  const midpoint =
+    selectivity.basis === "acceptance_rate" && selectivity.rate != null
+      ? midpointFromRealRate(composite, selectivity.rate)
+      : computeMidpoint(composite, selectivity.tier);
+
+  const halfWidth = RANGE_HALF_WIDTH[confidence];
+  const chanceMin = Math.max(0, Math.round(midpoint - halfWidth));
+  let chanceMax = Math.min(100, Math.round(midpoint + halfWidth));
+  // Same clamp as computeAdmissionPrediction -- see the reasoning there.
+  if (selectivity.basis === "acceptance_rate" && selectivity.rate != null && midpoint < selectivity.rate) {
+    chanceMax = Math.min(chanceMax, Math.round(selectivity.rate));
+  }
+
+  return {
+    chanceMin,
+    chanceMax,
+    category: computeCategory(midpoint),
+    midpoint: Math.round(midpoint),
+    competitivenessComposite: Math.round(composite),
+  };
+}
+
 // Single displayed percentage, derived from the stored range's midpoint.
 // The range/confidence machinery above still computes and stores a real
 // min/max (kept for future calibration and because narrower/wider spread is
