@@ -53,7 +53,9 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "Required everywhere. The Common App personal essay goes to every school and most selective schools add their own supplements, such as short why-us answers. This is among the most heavily weighted parts of the application.",
     priorities:
-      "Holistic review. Academic rigour and trajectory, extracurricular depth, essays and recommendations are weighed together, so no single factor dominates the way an entrance exam does elsewhere.",
+      "Grades and test scores matter, but extracurriculars, leadership and achievement still " +
+      "carry real weight alongside them. A strong activities record can meaningfully offset a " +
+      "slightly less perfect transcript.",
   },
   {
     slug: "united-kingdom",
@@ -82,7 +84,8 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "A single personal statement, and it must be subject-focused. Because the same statement reaches all five choices, it argues why you suit that course rather than that university.",
     priorities:
-      "Academic fit for the specific course: predicted grades, subject prerequisites, and evidence of genuine engagement with the subject.",
+      "Grades and subject-specific fit dominate almost entirely. Extracurriculars barely " +
+      "register — a personal statement helps, but it is not what gets you in.",
   },
   {
     slug: "india",
@@ -110,7 +113,8 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "Not part of exam-based admissions. Private liberal-arts universities are the exception and commonly ask for essays alongside an interview.",
     priorities:
-      "Your entrance exam rank, above nearly everything else. Board results matter mainly through eligibility cut-offs.",
+      "Almost entirely grades and exam-readiness against the cutoff. This reflects a rank-based " +
+      "system where extracurriculars play essentially no role in the actual seat allocation.",
   },
   {
     slug: "australia",
@@ -139,7 +143,8 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "Not normally required. Some scholarship applications and alternative-entry schemes ask for a written statement.",
     priorities:
-      "Your selection rank against the course cut-off, together with meeting the subject prerequisites.",
+      "Grades alone are almost everything, with fit to the specific course close behind. " +
+      "Extracurriculars are nearly irrelevant for standard entry.",
   },
   {
     slug: "singapore",
@@ -167,7 +172,8 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "Short written responses or a personal statement at several universities, shorter and more direct than a US essay.",
     priorities:
-      "Academic results measured against the course's published indicative grade profile, which each university updates annually.",
+      "Grades and course fit still lead, but activities and leadership get more room here than " +
+      "in the UK or Australia — enough to matter, not enough to compensate for weak grades.",
   },
   {
     slug: "hong-kong",
@@ -194,6 +200,7 @@ export const COUNTRY_GUIDES: CountryGuide[] = [
     essays:
       "Not a major component. Non-JUPAS applications often ask for a short personal statement.",
     priorities:
-      "Examination results against the programme's admission scores, with interviews deciding the margin in competitive subjects.",
+      "Very similar to Singapore: exam scores against the programme benchmark dominate, with a " +
+      "modest but real allowance for extracurriculars.",
   },
 ];
