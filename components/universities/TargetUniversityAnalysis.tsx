@@ -26,21 +26,17 @@ function selectivityLine(analysis: UniversityAnalysisRecord): { text: string; is
     case "acceptance_rate":
       return { text: rate != null ? `Acceptance rate ${rate}%` : "Published acceptance rate on record", isEstimate: false };
     case "rank_proxy":
-      return { text: "Selectivity estimated from world ranking (our estimate)", isEstimate: true };
+      return { text: "Our estimate, based on world ranking", isEstimate: true };
     case "ai_estimate":
-      // Deliberately the loudest label of the four. This figure has less
-      // behind it than a rank proxy -- no published rate, no ranking, just
-      // the model's general knowledge -- so it says so in plain words and
-      // never renders the bare number as though it were sourced.
+      // Short and plain, but it still says "estimate" -- that word is what
+      // keeps it from reading as a published figure, which is the only part
+      // that actually matters here.
       return {
-        text:
-          rate != null
-            ? `AI-estimated acceptance rate ~${rate}% -- not from a published source`
-            : "AI-estimated selectivity -- not from a published source",
+        text: rate != null ? `Our estimate: ~${rate}% acceptance rate` : "Our estimate",
         isEstimate: true,
       };
     default:
-      return { text: "No acceptance-rate data on record -- low-confidence estimate", isEstimate: true };
+      return { text: "Our estimate", isEstimate: true };
   }
 }
 

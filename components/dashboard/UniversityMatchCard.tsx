@@ -34,12 +34,12 @@ const CONFIDENCE_LABELS: Record<string, string> = {
 // because it has strictly less behind it -- no published figure at all.
 const BASIS_NOTICES: Partial<Record<DashboardMatchCard["selectivityBasis"], { text: string; style: string }>> = {
   rank_proxy: {
-    text: "Selectivity from world ranking",
+    text: "Our estimate, based on world ranking",
     style: "text-muted-foreground",
   },
   ai_estimate: {
-    text: "AI-estimated selectivity — not from a published source",
-    style: "text-amber-400",
+    text: "Our estimate",
+    style: "text-muted-foreground",
   },
 };
 
