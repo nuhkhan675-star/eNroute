@@ -6,7 +6,6 @@ import { getDashboardMatches } from "@/lib/db/dashboard";
 import { getRelevantUniversities, buildShortlist } from "@/lib/db/universities";
 import { getSavedUniversities } from "@/lib/db/saved";
 import { AnalyzeProfileButton } from "@/components/dashboard/AnalyzeProfileButton";
-import { DashboardMatchesQueue } from "@/components/dashboard/DashboardMatchesQueue";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,10 +38,6 @@ export default async function DashboardPage() {
       ? buildShortlist(await getRelevantUniversities(profile.fieldOfInterest.id, profile.targetCountryIds))
       : [];
   const shortlistIds = new Set(shortlist.map((r) => r.universityId));
-
-  const pending = shortlist
-    .filter((r) => !matches.some((m) => m.universityId === r.universityId))
-    .map((r) => r.universityId);
 
   // The recommended feed is the SHORTLIST, not every analysis on file. A
   // university the student looked up themselves is stored (so searching it
@@ -131,11 +126,18 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <DashboardMatchesQueue
-          initialMatches={recommended}
-          pending={pending}
-          savedUniversityIds={saved.map((s) => s.universityId)}
-        />
+        // Recommendations live on the Explore page now, behind their own
+        // button, rather than being duplicated on both surfaces.
+        <Card className="mt-8">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center text-sm text-muted-foreground">
+            Your matched universities are on the Explore page, ranked by how well each one fits your
+            profile.
+            <Button
+              nativeButton={false}
+              render={<Link href="/universities">Explore universities</Link>}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
