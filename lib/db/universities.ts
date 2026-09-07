@@ -235,6 +235,8 @@ export interface RelevantUniversity {
   acceptanceRate: number | null;
   /** Best global rank, so schools with no published rate can still be placed on the reach/likely spectrum. */
   globalRank: number | null;
+  /** Whether a campus photo is on record. Cosmetic only -- a tie-breaker between otherwise equal candidates, never a filter. */
+  hasPhoto: boolean;
 }
 
 /**
@@ -255,7 +257,7 @@ export async function getRelevantUniversities(
   countryIds?: string[]
 ): Promise<RelevantUniversity[]> {
   const supabase = await createClient();
-  let query = supabase.from("universities").select("id, country_id");
+  let query = supabase.from("universities").select("id, country_id, photo_url");
   if (countryIds && countryIds.length > 0) {
     query = query.in("country_id", countryIds);
   }
@@ -303,11 +305,14 @@ export async function getRelevantUniversities(
     if (!rateById.has(r.university_id)) rateById.set(r.university_id, r.acceptance_rate);
   }
 
+  const photoById = new Map<string, boolean>((unis ?? []).map((u: any) => [u.id, Boolean(u.photo_url)]));
+
   return universityIds.map((id) => ({
     universityId: id,
     matchesFieldOfInterest: matchedIds.has(id),
     acceptanceRate: rateById.get(id) ?? null,
     globalRank: rankById.get(id) ?? null,
+    hasPhoto: photoById.get(id) ?? false,
   }));
 }
 
@@ -357,6 +362,11 @@ export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST
     const weight = (basis: string) => (basis === "acceptance_rate" ? 0 : basis === "rank_proxy" ? 1 : 2);
     const w = weight(a.sel.basis) - weight(b.sel.basis);
     if (w !== 0) return w;
+    // Cosmetic, and deliberately ranked below both substantive keys above: a
+    // school with a campus photo never outranks a better field match or
+    // better-evidenced data, it only wins between candidates already equal on
+    // both. A card grid of grey placeholder icons reads as a broken product.
+    if (a.row.hasPhoto !== b.row.hasPhoto) return a.row.hasPhoto ? -1 : 1;
     // Within a tier, more accessible first, keeping the descending feel.
     return (b.row.acceptanceRate ?? -1) - (a.row.acceptanceRate ?? -1);
   };
