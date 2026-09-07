@@ -32,7 +32,7 @@ const UA = {
 // Logos, crests and icons are images of the institution's *branding*, not of
 // the institution. They read as broken to a student scanning a card grid.
 const NOT_A_PHOTO = /logo|icon|favicon|crest|wordmark|sprite|placeholder|avatar|banner-?ad|shield|emblem/i;
-const MIN_BYTES = 40_000; // logos are small; campus photography is not
+const MIN_BYTES = 18_000; // logos are small; campus photography is not
 
 function absolutise(src, base) {
   try {
@@ -67,8 +67,8 @@ function candidatesFrom(html, base) {
 // File size alone lets 320x240 blog thumbnails through, so read the real
 // dimensions out of the image header. Cards render ~200px wide on a 2x
 // display, and anything below this looks soft or is a thumbnail, not a hero.
-const MIN_W = 640;
-const MIN_H = 360;
+const MIN_W = 480;
+const MIN_H = 270;
 
 function dimensions(buf) {
   // PNG: IHDR width/height are big-endian at bytes 16..24.
@@ -155,6 +155,7 @@ async function getAll(path) {
 let unis = await getAll("universities?select=id,name,website,photo_url,photo_source_type&order=name");
 unis = unis.filter((u) => u.website);
 if (ONLY) unis = unis.filter((u) => u.name.toLowerCase().includes(ONLY.toLowerCase()));
+if (process.argv.includes("--missing")) unis = unis.filter((u) => !u.photo_url);
 if (LIMIT) unis = unis.slice(0, LIMIT);
 
 console.log("attempting " + unis.length + " universities\n");

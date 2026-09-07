@@ -22,21 +22,27 @@ const CATEGORY_STYLES: Record<string, string> = {
 // showing a confident-looking number.
 function selectivityLine(analysis: UniversityAnalysisRecord): { text: string; isEstimate: boolean } {
   const rate = analysis.selectivityRate;
+  const name = analysis.universityName;
   switch (analysis.selectivityBasis) {
     case "acceptance_rate":
-      return { text: rate != null ? `Acceptance rate ${rate}%` : "Published acceptance rate on record", isEstimate: false };
+      // Named subject and "of all applicants" together stop this being read as
+      // the student's own number, which sits directly above it.
+      return {
+        text: rate != null ? `${name} accepts ${rate}% of all applicants` : `Published acceptance rate on record for ${name}`,
+        isEstimate: false,
+      };
     case "rank_proxy":
-      return { text: "Our estimate, based on world ranking", isEstimate: true };
+      return { text: `${name}'s selectivity is estimated from its world ranking`, isEstimate: true };
     case "ai_estimate":
       // Short and plain, but it still says "estimate" -- that word is what
       // keeps it from reading as a published figure, which is the only part
       // that actually matters here.
       return {
-        text: rate != null ? `Our estimate: ~${rate}% acceptance rate` : "Our estimate",
+        text: rate != null ? `We estimate ${name} accepts ~${rate}% of all applicants` : `Our estimate for ${name}`,
         isEstimate: true,
       };
     default:
-      return { text: "Our estimate", isEstimate: true };
+      return { text: `Our estimate for ${name}`, isEstimate: true };
   }
 }
 
@@ -99,14 +105,24 @@ export function TargetUniversityAnalysis() {
                 {result.universityName}
               </Link>
               <Badge className={CATEGORY_STYLES[result.category]}>
-                {CATEGORY_LABELS[result.category]} · {chancePoint(result.chanceMin, result.chanceMax)}%
+                {CATEGORY_LABELS[result.category]}
               </Badge>
             </div>
 
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {line.isEstimate && <Info className="size-3.5 shrink-0" />}
-              {line.text}
-            </p>
+            {/* Two percentages sat side by side with no labels and read as
+                contradictory -- a 7% chance next to a 3.7% acceptance rate.
+                Each one now says whose number it is. */}
+            <div className="flex flex-col gap-0.5">
+              <p className="text-sm">
+                <span className="font-semibold">
+                  Your estimated chance: {chancePoint(result.chanceMin, result.chanceMax)}%
+                </span>
+              </p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {line.isEstimate && <Info className="size-3.5 shrink-0" />}
+                {line.text}
+              </p>
+            </div>
 
             <p className="text-sm">{result.reasoning}</p>
 
