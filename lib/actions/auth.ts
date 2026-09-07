@@ -44,10 +44,13 @@ export async function signUpWithPassword(formData: FormData): Promise<AuthResult
   // swallows its own errors.
   await notifyNewSignup({ name, email });
 
+  // A session only comes back when email confirmation is off. With it on,
+  // signUp returns no session and the caller swaps to the code form, which
+  // verifySignupCode() below completes.
   if (data.session) {
     redirect("/onboarding");
   }
-  return { message: "Check your email to confirm your account, then log in." };
+  return { message: `We sent a 6-digit code to ${email}. Enter it below to confirm your account.` };
 }
 
 export async function signInWithPassword(formData: FormData): Promise<AuthResult> {
@@ -114,6 +117,43 @@ export async function verifyEmailCode(formData: FormData): Promise<AuthResult> {
   }
 
   redirect("/dashboard");
+}
+
+/**
+ * Step 2 of signup: exchange the emailed confirmation code for a session.
+ *
+ * Distinct from verifyEmailCode() only in the OTP type -- "signup" consumes
+ * the token minted by the Confirm signup template, "email" the one from the
+ * Magic Link template. Both templates must use {{ .Token }}, not
+ * {{ .ConfirmationURL }}, or the recipient gets a link and has no code to type.
+ */
+export async function verifySignupCode(formData: FormData): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  const token = String(formData.get("code") || "").trim();
+  if (!email) return { error: "Enter your email." };
+  if (!token) return { error: "Enter the code from your email." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
+  if (error) {
+    // Same reasoning as verifyEmailCode: wrong, expired and already-used codes
+    // are indistinguishable to the user and shouldn't be distinguished here.
+    return { error: "That code isn't valid or has expired. Request a new one." };
+  }
+
+  redirect("/onboarding");
+}
+
+/** Send a fresh signup confirmation code to an address that hasn't confirmed yet. */
+export async function resendSignupCode(formData: FormData): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  if (!email) return { error: "Enter your email." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email });
+  if (error) return { error: error.message };
+
+  return { message: `We sent another code to ${email}.` };
 }
 
 export async function signOut() {
