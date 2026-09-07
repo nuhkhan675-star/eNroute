@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { signInWithPassword, signInWithMagicLink, type AuthResult } from "@/lib/actions/auth";
+import {
+  signInWithPassword,
+  signInWithEmailCode,
+  verifyEmailCode,
+  type AuthResult,
+} from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +17,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function LoginPage() {
   const [result, setResult] = useState<AuthResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Once a code has been sent we swap the email field for the code field,
+  // remembering the address so the verify step can be a single input.
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
 
   return (
     <div className="mx-auto flex min-h-[80vh] max-w-sm flex-col justify-center px-4">
@@ -55,15 +63,54 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <form
-            action={(formData) => startTransition(async () => setResult(await signInWithMagicLink(formData)))}
-            className="flex flex-col gap-2"
-          >
-            <Input name="email" type="email" placeholder="you@example.com" required />
-            <Button type="submit" variant="outline" disabled={isPending}>
-              Email me a sign-in link
-            </Button>
-          </form>
+          {codeSentTo === null ? (
+            <form
+              action={(formData) =>
+                startTransition(async () => {
+                  const res = await signInWithEmailCode(formData);
+                  setResult(res);
+                  if (!res.error) setCodeSentTo(String(formData.get("email") || "").trim());
+                })
+              }
+              className="flex flex-col gap-2"
+            >
+              <Input name="email" type="email" placeholder="you@example.com" required />
+              <Button type="submit" variant="outline" disabled={isPending}>
+                {isPending ? "Sending…" : "Email me a sign-in code"}
+              </Button>
+            </form>
+          ) : (
+            <form
+              action={(formData) => startTransition(async () => setResult(await verifyEmailCode(formData)))}
+              className="flex flex-col gap-2"
+            >
+              <input type="hidden" name="email" value={codeSentTo} />
+              <Input
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="6-digit code"
+                required
+                autoFocus
+                className="text-center text-lg tracking-[0.4em]"
+              />
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Verifying…" : "Sign in"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCodeSentTo(null);
+                  setResult(null);
+                }}
+                className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
+              >
+                Use a different email
+              </button>
+            </form>
+          )}
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}

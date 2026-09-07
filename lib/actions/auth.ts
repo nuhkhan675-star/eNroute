@@ -67,20 +67,53 @@ export async function signInWithPassword(formData: FormData): Promise<AuthResult
   redirect("/dashboard");
 }
 
-export async function signInWithMagicLink(formData: FormData): Promise<AuthResult> {
+/**
+ * Step 1 of code sign-in: email a six-digit code.
+ *
+ * This is the same signInWithOtp call that previously sent a magic link --
+ * whether the recipient gets a link or a code is decided entirely by the
+ * Supabase email template. The template must use {{ .Token }} rather than
+ * {{ .ConfirmationURL }}, or this will still deliver a link and the code form
+ * below will have nothing to accept.
+ *
+ * emailRedirectTo is deliberately dropped: it only applies to the link form,
+ * and leaving it set invites the template back toward sending one.
+ */
+export async function signInWithEmailCode(formData: FormData): Promise<AuthResult> {
   const email = String(formData.get("email") || "").trim();
   if (!email) return { error: "Enter your email." };
+
+  const human = await verifyTurnstile(String(formData.get("cf-turnstile-response") || "") || null);
+  if (!human.ok) return { error: human.error };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
-    },
+    // Codes are for signing IN. Letting this create an account would route
+    // around the signup form, and with it the name field and notification.
+    options: { shouldCreateUser: false },
   });
   if (error) return { error: error.message };
 
-  return { message: "Check your email for a sign-in link." };
+  return { message: `We sent a 6-digit code to ${email}. It expires in an hour.` };
+}
+
+/** Step 2: exchange the emailed code for a session. */
+export async function verifyEmailCode(formData: FormData): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  const token = String(formData.get("code") || "").trim();
+  if (!email) return { error: "Enter your email." };
+  if (!token) return { error: "Enter the code from your email." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+  if (error) {
+    // Supabase returns the same shape for wrong, expired and already-used
+    // codes; a single clear message beats leaking which it was.
+    return { error: "That code isn't valid or has expired. Request a new one." };
+  }
+
+  redirect("/dashboard");
 }
 
 export async function signOut() {
