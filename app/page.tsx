@@ -135,15 +135,23 @@ export default async function Home() {
               </div>
               <div className="rounded-2xl border border-border bg-card p-6">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-400">
-                  <AlertCircle className="size-4" /> Why this rating -- areas to strengthen
+                  <AlertCircle className="size-4" /> Why this rating -- weaknesses
                 </h2>
-                <ul className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-                  {weaknesses.map((s, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-amber-400">•</span> {s}
-                    </li>
-                  ))}
-                </ul>
+                {weaknesses.length > 0 ? (
+                  <ul className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+                    {weaknesses.map((s, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="text-amber-400">•</span> {s}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  // A profile of straight 6s, 7s and A*s genuinely has none, and
+                  // the analyst is now told to say so rather than invent one.
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    No material weaknesses stood out in your record.
+                  </p>
+                )}
               </div>
             </div>
 

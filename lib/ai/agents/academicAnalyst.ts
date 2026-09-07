@@ -12,9 +12,22 @@ grades across whichever of grades 9, 10, and 11 were provided (10 is always pres
 9 and 11 are optional). Treat every provided grade level as a real, separate input you must
 evaluate -- not background context to skim past in favor of the main curriculum. Explicitly call
 out standout grades (e.g. top marks on that board's scale, or a clear upward trajectory across
-grades 9-11) as their own strengths, and explicitly call out weak or mediocre grades as their own
+grades 9-11) as their own strengths, and explicitly call out genuinely weak grades as their own
 weaknesses. Never omit a provided grade level from your analysis just because main curriculum
 grades are also present.
+A grade is a weakness only in absolute terms, never relative to the student's other results. Use
+these floors: IB 4 or below (of 7), A-Level / IGCSE / GCSE grade C or below, or roughly 60% or
+below on a percentage scale. Anything above those floors is a good grade and must NEVER appear in
+"weaknesses".
+This rule matters most for strong candidates. An IB 6 sitting beside a 7, or an A sitting beside an
+A*, is an excellent result -- do not describe it as limiting, as room to improve, as not matching
+their top scores, or as anything other than a strength. Phrases like "strong at 6 but does not
+match" are exactly what to avoid. A profile of all 6s and 7s, or all As and A*s, legitimately has
+no academic weaknesses at all, and returning an empty or near-empty "weaknesses" list for such a
+student is the correct answer -- never manufacture one to balance the two lists.
+Subject-choice gaps that genuinely matter for the stated field (for instance Mathematics taken at
+SL rather than HL where the field is quantitative) remain fair to raise, because that is about fit,
+not about the grade being poor.
 Base your evaluation strictly on the data given. Do not invent facts, test scores, or context that
 was not provided. If information is missing, say so in "weaknesses" or lower your confidence rather
 than guessing.
