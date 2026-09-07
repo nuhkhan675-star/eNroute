@@ -24,6 +24,7 @@ import { CompareBar } from "@/components/universities/CompareBar";
 import { UniversityGrid } from "@/components/universities/UniversityGrid";
 import { TargetUniversityAnalysis } from "@/components/universities/TargetUniversityAnalysis";
 import { DashboardMatchesQueue } from "@/components/dashboard/DashboardMatchesQueue";
+import { RecommendationsReveal } from "@/components/universities/RecommendationsReveal";
 import { ArrowLeft } from "lucide-react";
 
 const CLASSIFICATION_ORDER: Record<string, number> = { likely: 0, target: 1, reach: 2, high_reach: 3 };
@@ -214,7 +215,9 @@ export default async function UniversitiesPage({
             Matched to {profile?.fieldOfInterest?.name ?? "your field of interest"} across all your target
             countries, ranked by fit.
           </p>
-          <DashboardMatchesQueue initialMatches={matches} pending={pending} savedUniversityIds={savedIds} />
+          <RecommendationsReveal>
+            <DashboardMatchesQueue initialMatches={matches} pending={pending} savedUniversityIds={savedIds} />
+          </RecommendationsReveal>
         </div>
       )}
 

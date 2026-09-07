@@ -181,17 +181,29 @@ async function worker() {
         "OK   " + u.name + "\n       " + res.photo + "  (" + res.w + "x" + res.h + ", " + Math.round(res.bytes / 1024) + "kb)",
       );
       if (APPLY) {
-        await fetch(U + "/rest/v1/universities?id=eq." + u.id, {
-          method: "PATCH",
-          headers: { ...H, Prefer: "return=minimal" },
-          body: JSON.stringify({
-            photo_url: res.photo,
-            photo_source_type: "official_website",
-            photo_source_url: u.website,
-            photo_attribution: u.name + " (official website)",
-            photo_last_verified_at: new Date().toISOString(),
-          }),
-        });
+        // One flaky write must not kill a run that has already done the
+        // expensive part. Retry briefly, then give up on this row only.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const w = await fetch(U + "/rest/v1/universities?id=eq." + u.id, {
+              method: "PATCH",
+              headers: { ...H, Prefer: "return=minimal" },
+              body: JSON.stringify({
+                photo_url: res.photo,
+                photo_source_type: "official_website",
+                photo_source_url: u.website,
+                photo_attribution: u.name + " (official website)",
+                photo_last_verified_at: new Date().toISOString(),
+              }),
+              signal: AbortSignal.timeout(20_000),
+            });
+            if (w.ok) break;
+          } catch {
+            /* retried below */
+          }
+          if (attempt === 2) console.log("     WRITE FAILED for " + u.name);
+          else await new Promise((s) => setTimeout(s, 1000 * (attempt + 1)));
+        }
       }
     } else {
       failures.push(u.name + "  --  " + res.error);
