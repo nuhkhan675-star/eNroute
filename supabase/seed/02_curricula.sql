@@ -9,6 +9,5 @@ insert into public.curricula (code, name) values
 ('ISC','ISC'),
 ('AP','AP'),
 ('US_HS_DIPLOMA','American High School Diploma'),
-('AU_CURRICULUM','Australian Curriculum'),
-('OTHER','Other')
+('AU_CURRICULUM','Australian Curriculum')
 on conflict (code) do nothing;
