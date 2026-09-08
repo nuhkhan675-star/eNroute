@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
@@ -63,7 +64,13 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          {codeSentTo === null ? (
+          {/* Google and the emailed code are both alternatives to the password
+              form above, so they sit together under one divider rather than
+              each getting their own "or". */}
+          <GoogleButton label="Continue with Google" />
+
+          <div className="mt-3">
+            {codeSentTo === null ? (
             <form
               action={(formData) =>
                 startTransition(async () => {
@@ -110,7 +117,8 @@ export default function LoginPage() {
                 Use a different email
               </button>
             </form>
-          )}
+            )}
+          </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}

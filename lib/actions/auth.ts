@@ -219,6 +219,30 @@ export async function changePassword(formData: FormData): Promise<AuthResult> {
   return { message: "Password updated." };
 }
 
+/**
+ * Start the Google OAuth flow.
+ *
+ * Supabase returns a URL to send the browser to; the round trip comes back to
+ * /auth/callback with a PKCE code, which that route already exchanges for a
+ * session. `next=/dashboard` rather than /onboarding because the dashboard
+ * sends anyone without a profile on to onboarding anyway -- a returning user
+ * shouldn't land in the wizard.
+ *
+ * No Turnstile check here: the human verification is Google's, and there's no
+ * form for the widget to write a token into.
+ */
+export async function signInWithGoogle(): Promise<AuthResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${siteUrl()}/auth/callback?next=/dashboard` },
+  });
+  if (error) return { error: error.message };
+  if (!data.url) return { error: "Couldn't start Google sign-in. Try again." };
+
+  redirect(data.url);
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

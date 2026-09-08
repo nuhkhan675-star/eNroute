@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SignupPage() {
@@ -136,6 +137,14 @@ export default function SignupPage() {
               {isPending ? "Creating account…" : "Create account"}
             </Button>
           </form>
+          <div className="my-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            or
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleButton label="Sign up with Google" />
+
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="underline underline-offset-4">
