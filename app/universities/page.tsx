@@ -193,21 +193,29 @@ export default async function UniversitiesPage({
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Explore universities</h1>
       <p className="mt-1 text-muted-foreground">
-        Search for a specific university, or browse your recommended matches below.
+        {profile?.profileStrength != null
+          ? "Search for a specific university, or browse your recommended matches below."
+          : "Every estimate here is measured against your profile, so that comes first."}
       </p>
 
       {profile?.profileStrength != null && <TargetUniversityAnalysis />}
 
       {profile?.profileStrength == null ? (
-        profile && (
-          <Card className="mt-8">
-            <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
-              Analyse your profile to see universities matched to your field of interest, ranked by
-              your chances, across every country you&apos;re targeting.
-              <Button nativeButton={false} render={<Link href="/dashboard">Go to your dashboard</Link>} />
-            </CardContent>
-          </Card>
-        )
+        // Two different people land here: one who has never started a profile,
+        // and one who started but never ran the analysis. Previously only the
+        // second saw anything at all -- the first got a blank page, because the
+        // card was gated on `profile` existing.
+        <Card className="mt-8">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center text-sm text-muted-foreground">
+            {profile
+              ? "Your profile isn't analysed yet. Finish it and we'll rank universities across every country you're targeting, by how well each one fits you."
+              : "Create your profile to explore universities. We rank them by how well each one fits your grades, subjects and activities — so there's nothing to show until we know those."}
+            <Button
+              nativeButton={false}
+              render={<Link href="/onboarding">{profile ? "Finish your profile" : "Create your profile"}</Link>}
+            />
+          </CardContent>
+        </Card>
       ) : (
         <div className="mt-8">
           <h2 className="text-lg font-medium">Recommended for you</h2>
