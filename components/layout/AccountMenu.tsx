@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { signOut } from "@/lib/actions/auth";
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { ChevronDown, LogOut, Settings, SquarePen } from "lucide-react";
 
 /** "Mohd Nuh Khan" -> "MN". Falls back to the email's first letter. */
 function initialsFor(name: string, email: string): string {
@@ -44,6 +44,16 @@ export function AccountMenu({ name, email }: { name: string; email: string }) {
         </div>
 
         <div className="p-1">
+          {/* Onboarding doubles as the profile editor -- it loads the saved
+              draft rather than starting blank, and re-analyses on completion. */}
+          <Link
+            href="/onboarding"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
+          >
+            <SquarePen className="size-4 text-muted-foreground" />
+            Edit profile
+          </Link>
+
           <Link
             href="/account"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
