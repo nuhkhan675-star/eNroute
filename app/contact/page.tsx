@@ -41,6 +41,22 @@ export default function ContactPage() {
         eNroute is built and run by one person, so this goes straight to a real inbox.
       </p>
 
+      {/* Who "one person" is. The homepage says this at the bottom, but someone
+          arriving straight at /contact from the footer never sees that. */}
+      <div className="mt-6 flex items-center gap-4 rounded-xl border border-border bg-card p-5">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
+          NK
+        </div>
+        <div>
+          <p className="text-sm font-semibold">Nuh Khan</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            A student and founder who believes the choices we make today shape the opportunities we
+            have tomorrow. I built eNroute to help students move forward with clarity, not
+            uncertainty &mdash; and I read everything that comes in.
+          </p>
+        </div>
+      </div>
+
       <div className="mt-6">
         <CopyEmail email={EMAIL} />
         <p className="mt-2 text-xs text-muted-foreground">
