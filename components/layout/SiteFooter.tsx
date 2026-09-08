@@ -15,7 +15,7 @@ const COMPANY = [
   { label: "Data sources & methodology", href: "/data-sources" },
   { label: "Terms & privacy", href: "/terms" },
   { label: "FAQs", href: "/faqs" },
-  { label: "Contact", href: "mailto:enrouteuniadvisor@gmail.com" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const COVERAGE = ["United States", "United Kingdom", "India", "Australia", "Singapore", "Hong Kong"];
