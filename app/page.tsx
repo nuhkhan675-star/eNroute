@@ -243,13 +243,6 @@ export default async function Home() {
                 </Link>
               }
             />
-
-            <Link
-              href="/universities"
-              className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            >
-              Or browse universities first
-            </Link>
           </div>
         </section>
 
