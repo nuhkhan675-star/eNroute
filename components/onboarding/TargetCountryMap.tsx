@@ -1,50 +1,89 @@
 "use client";
 
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 /**
  * A dot-matrix world map that lights up the countries a student has picked.
  *
- * The landmass is a hand-authored mask rather than real geodata: at this
- * resolution (60x30 cells, 6 degrees each) a proper projection would buy
- * nothing a reader could see, and it keeps the component dependency-free.
- * Rows are described as spans instead of 60-character strings so the shape
- * stays legible and editable.
+ * Landmass is described as latitude/longitude boxes and rasterised at render
+ * time, rather than as hand-drawn cell spans. Boxes are far easier to reason
+ * about ("Iberia is 36-44N, 10W-3E") and, more usefully, the resolution
+ * becomes a single constant -- the first version was locked to its 6-degree
+ * grid and looked it.
  */
-const COLS = 60;
-const ROWS = 30;
+const CELL_DEG = 3;
+const COLS = 360 / CELL_DEG; // 120
+const ROWS = 180 / CELL_DEG; // 60
+// Rows below this are Antarctic ocean and empty; cropping keeps the map from
+// floating in dead space.
+const VISIBLE_ROWS = Math.round((90 - -60) / CELL_DEG);
 
-// row -> [startCol, endCol] spans of land. Row 0 is 90..84N, each row 6
-// degrees south of the last; col 0 is 180..174W, each col 6 degrees east.
-const LAND: Record<number, [number, number][]> = {
-  1: [[21, 25]],
-  2: [[8, 18], [20, 26], [45, 58]],
-  3: [[3, 19], [21, 25], [30, 33], [34, 59]],
-  4: [[2, 20], [22, 25], [29, 33], [34, 59]],
-  5: [[5, 20], [28, 32], [33, 59]],
-  6: [[6, 20], [28, 29], [30, 35], [36, 59]],
-  7: [[7, 20], [28, 37], [38, 59]],
-  8: [[7, 21], [28, 36], [37, 59]],
-  9: [[8, 21], [28, 39], [39, 44], [45, 58]],
-  10: [[10, 17], [27, 39], [39, 43], [47, 50], [51, 58]],
-  11: [[12, 17], [27, 39], [39, 43], [46, 50], [51, 56]],
-  12: [[14, 19], [27, 39], [46, 50], [51, 56]],
-  13: [[18, 24], [27, 40], [47, 49], [52, 57]],
-  14: [[17, 25], [28, 40], [52, 58]],
-  15: [[17, 25], [29, 39], [52, 58]],
-  16: [[17, 25], [29, 38], [52, 58]],
-  17: [[17, 24], [29, 37], [50, 56]],
-  18: [[18, 24], [30, 37], [48, 56]],
-  19: [[19, 24], [30, 36], [48, 56]],
-  20: [[19, 23], [31, 35], [49, 55]],
-  21: [[20, 22], [50, 54], [57, 58]],
-  22: [[20, 22], [57, 58]],
-  23: [[20, 21]],
-  24: [[20, 21]],
-  // Antarctica is deliberately omitted: as a straight band of dots across the
-  // bottom it read as a rendering artefact rather than a continent, and no
-  // supported country sits near it.
-};
+/** [latMin, latMax, lonMin, lonMax] */
+type Box = [number, number, number, number];
+
+const LAND: Box[] = [
+  // --- North America
+  [55, 71, -168, -141], // Alaska
+  [49, 70, -140, -95], // western Canada
+  [49, 62, -95, -75], // central Canada
+  [45, 62, -80, -55], // eastern Canada / Quebec
+  [68, 80, -100, -62], // Arctic archipelago
+  [60, 83, -55, -20], // Greenland
+  [25, 49, -125, -67], // continental US
+  [30, 49, -95, -75], // US midwest/east fill
+  [15, 32, -117, -87], // Mexico
+  [7, 18, -92, -77], // Central America
+  [18, 23, -85, -74], // Caribbean
+
+  // --- South America
+  [-4, 12, -79, -60], // Colombia / Venezuela
+  [-33, 5, -74, -35], // Brazil
+  [-55, 0, -77, -66], // Andes / Peru / Chile
+  [-40, -21, -73, -54], // Argentina north
+  [-55, -40, -74, -62], // Patagonia
+
+  // --- Europe
+  [36, 44, -10, 3], // Iberia
+  [43, 51, -5, 8], // France
+  [45, 55, 5, 24], // central Europe
+  [37, 47, 7, 18], // Italy
+  [39, 48, 15, 30], // Balkans
+  [50, 59, -6, 2], // Great Britain
+  [51, 55, -10, -6], // Ireland
+  [55, 71, 5, 31], // Scandinavia
+  [45, 60, 24, 40], // eastern Europe
+
+  // --- Asia
+  [50, 70, 30, 60], // western Russia
+  [50, 73, 60, 180], // Siberia
+  [42, 52, 60, 140], // Russian steppe / Mongolia
+  [36, 50, 50, 80], // central Asia
+  [20, 45, 75, 123], // China
+  [31, 45, 130, 146], // Japan
+  [34, 43, 125, 130], // Korea
+  [20, 45, 100, 123], // eastern China fill
+  [8, 35, 68, 90], // India
+  [5, 23, 92, 110], // mainland SE Asia
+  [-10, 7, 95, 141], // Indonesia
+  [5, 19, 117, 126], // Philippines
+  [12, 40, 34, 60], // Middle East
+  [12, 32, 34, 56], // Arabia
+
+  // --- Africa
+  [20, 37, -17, 35], // north Africa
+  [4, 20, -17, 25], // Sahel / west Africa
+  [-12, 18, 25, 51], // east Africa / Horn
+  [-13, 5, 8, 31], // central Africa
+  [-35, -13, 12, 41], // southern Africa
+  [-26, -12, 43, 51], // Madagascar
+
+  // --- Oceania
+  [-39, -11, 113, 154], // Australia
+  [-43, -39, 144, 149], // Tasmania
+  [-47, -34, 166, 179], // New Zealand
+  [-11, -1, 131, 151], // Papua New Guinea
+];
 
 // iso -> [latitude, longitude], roughly the population centre.
 const COORDS: Record<string, [number, number]> = {
@@ -64,11 +103,11 @@ function project(lat: number, lon: number): { x: number; y: number } {
   return { x: ((lon + 180) / 360) * COLS, y: ((90 - lat) / 180) * ROWS };
 }
 
-const LAND_CELLS: { x: number; y: number }[] = [];
-for (const [row, spans] of Object.entries(LAND)) {
-  for (const [from, to] of spans) {
-    for (let c = from; c <= to; c++) LAND_CELLS.push({ x: c + 0.5, y: Number(row) + 0.5 });
+function isLand(lat: number, lon: number): boolean {
+  for (const [latMin, latMax, lonMin, lonMax] of LAND) {
+    if (lat >= latMin && lat <= latMax && lon >= lonMin && lon <= lonMax) return true;
   }
+  return false;
 }
 
 interface Props {
@@ -78,6 +117,20 @@ interface Props {
 }
 
 export function TargetCountryMap({ selected, className }: Props) {
+  // ~7,000 point-in-box tests; trivial, but there's no reason to redo it on
+  // every re-render as the student toggles countries.
+  const landCells = useMemo(() => {
+    const cells: { x: number; y: number }[] = [];
+    for (let r = 0; r < VISIBLE_ROWS; r++) {
+      const lat = 90 - (r + 0.5) * CELL_DEG;
+      for (let c = 0; c < COLS; c++) {
+        const lon = -180 + (c + 0.5) * CELL_DEG;
+        if (isLand(lat, lon)) cells.push({ x: c + 0.5, y: r + 0.5 });
+      }
+    }
+    return cells;
+  }, []);
+
   const markers = selected
     .map((c) => ({ ...c, coord: COORDS[c.isoCode] }))
     .filter((c) => c.coord)
@@ -85,19 +138,24 @@ export function TargetCountryMap({ selected, className }: Props) {
 
   return (
     <div className={cn("relative overflow-hidden rounded-xl border border-border bg-muted/30", className)}>
-      <svg viewBox="0 0 60 26" className="w-full" role="img" aria-label="World map of your target countries">
-        {LAND_CELLS.map((cell, i) => (
-          <circle key={i} cx={cell.x} cy={cell.y} r={0.26} className="fill-muted-foreground/25" />
+      <svg
+        viewBox={`0 0 ${COLS} ${VISIBLE_ROWS}`}
+        className="w-full"
+        role="img"
+        aria-label="World map of your target countries"
+      >
+        {landCells.map((cell, i) => (
+          <circle key={i} cx={cell.x} cy={cell.y} r={0.32} className="fill-muted-foreground/25" />
         ))}
 
         {markers.map((m) => (
           <g key={m.isoCode}>
             {/* Halo first so it sits under the solid dot. */}
-            <circle cx={m.x} cy={m.y} r={1.4} className="fill-primary/20">
-              <animate attributeName="r" values="1;1.9;1" dur="2.4s" repeatCount="indefinite" />
+            <circle cx={m.x} cy={m.y} r={2.6} className="fill-primary/20">
+              <animate attributeName="r" values="1.9;3.6;1.9" dur="2.4s" repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.55;0.05;0.55" dur="2.4s" repeatCount="indefinite" />
             </circle>
-            <circle cx={m.x} cy={m.y} r={0.62} className="fill-primary" />
+            <circle cx={m.x} cy={m.y} r={1.15} className="fill-primary" />
           </g>
         ))}
       </svg>
