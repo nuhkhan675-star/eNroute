@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { CursorGlow } from "@/components/layout/CursorGlow";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <CursorGlow />
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
+        <SiteFooter />
         <Toaster />
       </body>
     </html>

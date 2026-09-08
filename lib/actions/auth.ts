@@ -156,6 +156,45 @@ export async function resendSignupCode(formData: FormData): Promise<AuthResult> 
   return { message: `We sent another code to ${email}.` };
 }
 
+/**
+ * Change the password of a signed-in user, from account settings.
+ *
+ * Distinct from updatePassword() above, which serves the reset-link flow where
+ * possession of the emailed link IS the proof of identity. Here the user
+ * already has a session, and supabase.auth.updateUser({ password }) would
+ * accept a new password without ever asking for the old one -- so anyone at a
+ * borrowed laptop could take the account over. Re-authenticating first closes
+ * that, and matches what the form asks for.
+ */
+export async function changePassword(formData: FormData): Promise<AuthResult> {
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const password = String(formData.get("password") || "");
+  if (!currentPassword) return { error: "Enter your current password." };
+  if (password.length < 8) return { error: "Choose a new password of at least 8 characters." };
+  if (password === currentPassword) return { error: "That's already your password." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "You need to be logged in to change your password." };
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (reauthError) {
+    // Also the path for an account created by emailed code, which has no
+    // password to verify against -- the message holds either way.
+    return { error: "That isn't your current password." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  return { message: "Password updated." };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

@@ -6,6 +6,7 @@ import type { Country } from "@/lib/db/reference";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { TargetCountryMap } from "@/components/onboarding/TargetCountryMap";
 
 interface Props {
   countries: Country[];
@@ -36,6 +37,12 @@ export function StepTargetCountries({ countries, onNext, onBack }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <TargetCountryMap
+          selected={countries
+            .filter((c) => targetCountryIds.includes(c.id))
+            .map((c) => ({ isoCode: c.iso_code, name: c.name }))}
+        />
+
         <div className="flex flex-wrap gap-2">
           {countries.map((c) => {
             const selected = targetCountryIds.includes(c.id);

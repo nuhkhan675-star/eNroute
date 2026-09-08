@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/actions/auth";
 import { Logo } from "@/components/layout/Logo";
+import { AccountMenu } from "@/components/layout/AccountMenu";
 
 export async function SiteHeader() {
   const supabase = await createClient();
@@ -31,11 +31,10 @@ export async function SiteHeader() {
               <Link href="/application-info" className="text-muted-foreground transition-colors hover:text-foreground">
                 Application Info
               </Link>
-              <form action={signOut}>
-                <Button type="submit" variant="ghost" size="sm">
-                  Log out
-                </Button>
-              </form>
+              <AccountMenu
+                name={String(user.user_metadata?.full_name ?? "")}
+                email={user.email ?? ""}
+              />
             </>
           ) : (
             <div className="flex items-center gap-2">
