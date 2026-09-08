@@ -1,119 +1,155 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "FAQs · eNroute",
-  description: "How eNroute estimates your admission chances, what data it uses, and what it can't tell you.",
+  description: "How to read the numbers eNroute gives you, and what sits behind them.",
 };
 
-// Answers are written against what the product actually does. Where a
-// capability doesn't exist yet (self-serve account deletion), the answer says
-// how to get it done rather than implying a button that isn't there.
+// Questions students actually hit while using this specific product -- what a
+// number means, why two similar schools differ, why a figure moved -- rather
+// than a generic product FAQ. Where a capability doesn't exist yet, the answer
+// says so instead of implying a button that isn't there.
 const FAQS: { q: string; a: React.ReactNode }[] = [
   {
-    q: "What is eNroute?",
+    q: "What does the percentage on a university actually mean?",
     a: (
       <>
-        An admissions advisor for 11th and 12th graders applying abroad. You enter your curriculum,
-        grades and activities once, and eNroute estimates your chances at universities across six
-        countries &mdash; with the reasoning behind every number, not just the number.
+        It&apos;s our estimate of how you compare with the people who typically get in there, expressed
+        as a chance. It is not a prediction of a decision, and it isn&apos;t an average of anything. Read
+        it the way you&apos;d read a weather forecast: useful for planning, not a promise about Tuesday.
       </>
     ),
   },
   {
-    q: "How is my chance percentage worked out?",
+    q: "Why does one university show an acceptance rate and another just says “our estimate”?",
     a: (
       <>
-        In two stages. First we place the university on a selectivity scale using the best evidence
-        available for it: a published acceptance rate where one exists, otherwise its world ranking,
-        otherwise our own estimate. Then we score your profile across academics, subject fit,
-        extracurriculars and entry requirements, and combine those into one figure anchored to that
-        university&apos;s real selectivity. The weighting differs by country, because what matters
-        differs by country &mdash; UK admissions turn heavily on subject-specific grades, Indian ones
-        largely on exam performance against a cutoff, US ones on a broader picture.
+        Because one published its numbers and the other didn&apos;t. We use the strongest evidence
+        available for each university, in a fixed order: a real published acceptance rate first, then its
+        world ranking as a proxy, then our own model. The label on the card always tells you which of
+        those you&apos;re looking at, and estimates carry lower confidence on purpose.
       </>
     ),
   },
   {
-    q: "Does a high percentage mean I'll get in?",
+    q: "Two universities are ranked about the same. Why are my chances so different?",
     a: (
       <>
-        No, and you should be sceptical of any tool that implies otherwise. It&apos;s an estimate built
-        from published data and what you told us. Admissions committees weigh essays, recommendations,
-        interviews and context we simply can&apos;t see. We&apos;re deliberately strict at the most
-        selective universities &mdash; a number that looks too generous there is a broken model, not
-        good news.
+        Usually because ranking and selectivity aren&apos;t the same thing &mdash; a strong research
+        university can admit a large share of applicants, and a smaller teaching-focused one can be far
+        harder to get into. It can also be subject fit: if one of them actually teaches your field and the
+        other doesn&apos;t, that moves the number.
       </>
     ),
   },
   {
-    q: "Which curricula can I enter?",
+    q: "My profile strength says 7.7/10. Is that my chance of getting in?",
     a: (
       <>
-        IB Diploma, A Levels, AP, the American High School Diploma, the Australian Curriculum, CBSE,
-        ICSE and ISC. You can also add Grade 9, 10 and 11 results from your secondary board, which are
-        assessed as evidence in their own right rather than as background.
+        No &mdash; those are separate things. Profile strength summarises your academics and activities on
+        their own, with no university involved. Your chances are that profile measured against one
+        specific university&apos;s selectivity. A strong profile can still be a reach at a school that
+        admits four percent of applicants.
       </>
     ),
   },
   {
-    q: "Which countries does eNroute cover?",
+    q: "I edited my profile and my percentages moved. Did something break?",
     a: (
       <>
-        The United States, United Kingdom, India, Australia, Singapore and Hong Kong &mdash; over 2,000
-        universities in total. You pick which of them you&apos;re targeting, and recommendations are
-        ranked across all of your choices at once rather than one country at a time.
+        No. Analyses are calculated from your profile as it stood, so adding a subject, a test score or an
+        activity re-scores you. Adding real detail usually helps; removing it usually doesn&apos;t hurt so
+        much as leave us with less to credit you for. If a number moves a long way from one small edit,
+        we&apos;d genuinely like to know &mdash; that&apos;s worth an email.
       </>
     ),
   },
   {
-    q: "Where does the data come from?",
+    q: "How do you read HL versus SL, or grades from different boards?",
     a: (
       <>
-        Official and government sources wherever they publish: the U.S. Department of Education&apos;s
-        College Scorecard, Australia&apos;s TISC application statistics, Hong Kong&apos;s UGC programme
-        list, and universities&apos; own published admissions figures. Every acceptance rate we store is
-        tied to the source it came from.
+        On each system&apos;s own terms. An IB 6 at Higher Level, an A Level B and an 85% on a CBSE board
+        exam are not converted into a shared GPA and compared &mdash; they&apos;re assessed against what
+        each actually signals, including whether you took a subject at the level your field expects.
+        Maths at SL when you&apos;re applying for finance is a fit issue, and we&apos;ll say so.
       </>
     ),
   },
   {
-    q: "What if there's no published data for a university?",
+    q: "Does the same profile get judged differently in different countries?",
     a: (
       <>
-        We say so, on the card. Most countries&apos; registries publish enrolment but never application
-        numbers, so a real acceptance rate genuinely doesn&apos;t exist for many universities. In those
-        cases the estimate is labelled as ours &mdash; derived from world ranking, or from the model
-        itself &mdash; and carries lower confidence. It is never dressed up as a published figure.
+        Yes, deliberately. UK offers hinge largely on subject-specific grades and your stated course.
+        Indian admission is mostly performance against a cutoff. US admission weighs a broader picture
+        including activities. We weight those factors differently per country rather than applying one
+        formula everywhere, because applying one formula everywhere would be wrong in five of them.
       </>
     ),
   },
   {
-    q: "Is my information private?",
+    q: "It listed something as a weakness that I think is a good grade.",
     a: (
       <>
-        Your profile and results are stored against your account and used only to produce your own
-        analyses. We don&apos;t sell your data or share it with universities, agents or advertisers.
+        Then it was a bug, and it&apos;s fixed. A grade only counts against you in absolute terms &mdash;
+        roughly an IB 4 or below, a C or below, or under about 60%. A 6 sitting next to a 7, or an A next
+        to an A*, is an excellent result and will never be listed as a weakness. Subject-choice gaps that
+        genuinely matter for your field are still raised, because those are about fit rather than
+        performance.
       </>
     ),
   },
   {
-    q: "Does it cost anything?",
-    a: <>No. eNroute is free to use.</>,
-  },
-  {
-    q: "Can I delete my account and everything in it?",
+    q: "I can't find a university in the search box.",
     a: (
       <>
-        Yes &mdash; email{" "}
-        <a
-          href="mailto:enrouteuniadvisor@gmail.com"
-          className="text-primary underline underline-offset-4"
-        >
+        Try its short form &mdash; NUS, HKU, IIT, LSE all work, and so do partial names. If it still
+        isn&apos;t there, it may not be in our catalogue yet; tell us and we&apos;ll look at adding it. Any
+        university we do hold can be analysed on demand, whether or not it appears in your
+        recommendations.
+      </>
+    ),
+  },
+  {
+    q: "How many universities do you check for me?",
+    a: (
+      <>
+        Around twenty, chosen to span the range from comfortable to genuine reach across every country
+        you&apos;ve selected &mdash; not the twenty most famous, and not twenty safe bets. You can analyse
+        any other university yourself from{" "}
+        <Link href="/universities" className="text-primary underline underline-offset-4">
+          Explore universities
+        </Link>
+        , and the result is saved so looking at it again is instant.
+      </>
+    ),
+  },
+  {
+    q: "Who sees what I type in?",
+    a: (
+      <>
+        Your profile is stored against your account and used to produce your own analyses. Writing that
+        assessment means sending the relevant academic and activity details to an AI provider, without
+        your name or email attached. Nothing goes to universities, agents or advertisers, and nothing is
+        sold. The full detail is in our{" "}
+        <Link href="/terms" className="text-primary underline underline-offset-4">
+          terms and privacy
+        </Link>{" "}
+        page.
+      </>
+    ),
+  },
+  {
+    q: "What does it cost, and how do I get my account removed?",
+    a: (
+      <>
+        It&apos;s free. To have your account and everything attached to it deleted, email{" "}
+        <a href="mailto:enrouteuniadvisor@gmail.com" className="text-primary underline underline-offset-4">
           enrouteuniadvisor@gmail.com
         </a>{" "}
-        from the address you signed up with and your account and profile will be removed. There
-        isn&apos;t a self-serve button for this yet.
+        from the address you signed up with &mdash; we do it by hand, as there&apos;s no self-serve button
+        for it yet.
       </>
     ),
   },
@@ -122,13 +158,10 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
 export default function FaqsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-14">
-      <h1 className="text-3xl font-semibold tracking-tight">Frequently asked questions</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Questions students ask us</h1>
       <p className="mt-2 text-muted-foreground">
-        Can&apos;t find what you&apos;re looking for? Email{" "}
-        <a
-          href="mailto:enrouteuniadvisor@gmail.com"
-          className="text-primary underline underline-offset-4"
-        >
+        Mostly about how to read the numbers. Anything missing? Email{" "}
+        <a href="mailto:enrouteuniadvisor@gmail.com" className="text-primary underline underline-offset-4">
           enrouteuniadvisor@gmail.com
         </a>
         .

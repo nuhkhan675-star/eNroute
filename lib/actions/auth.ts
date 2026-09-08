@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
 import { notifyNewSignup } from "@/lib/notifications/newUser";
 
@@ -154,6 +155,29 @@ export async function resendSignupCode(formData: FormData): Promise<AuthResult> 
   if (error) return { error: error.message };
 
   return { message: `We sent another code to ${email}.` };
+}
+
+/**
+ * Set the display name shown in the header and account settings.
+ *
+ * The name lives in auth user_metadata (written at signup), not on
+ * student_profiles, which has no name column. Accounts created before that
+ * field existed have no name at all, which is why this is editable rather than
+ * read-only.
+ */
+export async function updateDisplayName(formData: FormData): Promise<AuthResult> {
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return { error: "Enter your name." };
+  if (name.length > 80) return { error: "That name is too long." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ data: { full_name: name } });
+  if (error) return { error: error.message };
+
+  // The header is server-rendered from the session, so it keeps showing the
+  // old name until the route re-renders.
+  revalidatePath("/", "layout");
+  return { message: "Name updated." };
 }
 
 /**

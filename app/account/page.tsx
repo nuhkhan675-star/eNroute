@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangePasswordForm } from "@/components/account/ChangePasswordForm";
+import { DisplayNameForm } from "@/components/account/DisplayNameForm";
 import { KeyRound, User } from "lucide-react";
 
 export default async function AccountPage() {
@@ -24,12 +25,9 @@ export default async function AccountPage() {
             <User className="size-4 text-emerald-400" /> Your details
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <div className="flex items-baseline justify-between gap-4">
-            <span className="text-muted-foreground">Name</span>
-            <span className="font-medium">{name || "Not set"}</span>
-          </div>
-          <div className="flex items-baseline justify-between gap-4">
+        <CardContent className="flex flex-col gap-5 text-sm">
+          <DisplayNameForm initialName={name} />
+          <div className="flex items-baseline justify-between gap-4 border-t border-border pt-4">
             <span className="text-muted-foreground">Email</span>
             <span className="truncate font-medium">{user.email}</span>
           </div>
