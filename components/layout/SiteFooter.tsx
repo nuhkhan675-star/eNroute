@@ -12,7 +12,9 @@ const PRODUCT = [
 
 const COMPANY = [
   { label: "Why we built eNroute", href: "/" },
-  { label: "Compare universities", href: "/universities/compare" },
+  { label: "Data sources & methodology", href: "/data-sources" },
+  { label: "Terms & privacy", href: "/terms" },
+  { label: "FAQs", href: "/faqs" },
   { label: "Contact", href: "mailto:enrouteuniadvisor@gmail.com" },
 ];
 
@@ -25,10 +27,10 @@ export function SiteFooter() {
         <div>
           <Logo className="h-9" />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-            Most admissions tools only cover the US, and only understand a single GPA scale. eNroute
-            reads real admissions data across six countries and gives 11th and 12th graders an honest
-            read on their chances &mdash; reasoned from published figures, not guessed &mdash; wherever
-            they&apos;re applying.
+            eNroute reads your results on their own terms &mdash; IB points, A Level grades, a CBSE
+            percentage &mdash; and works out where that actually places you at universities across six
+            countries. Every estimate is traced back to the admissions data behind it, and shown with
+            the reasoning that produced it.
           </p>
           <p className="mt-6 text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} eNroute. All rights reserved.
