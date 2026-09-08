@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { signInWithGoogle } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { GoogleIdentityButton } from "@/components/auth/GoogleIdentityButton";
 
 // Google's own mark. Their branding terms require the official multicolour G
 // on a sign-in button rather than a redrawn or recoloured one.
@@ -31,6 +32,14 @@ function GoogleMark() {
 
 export function GoogleButton({ label = "Continue with Google" }: { label?: string }) {
   const [isPending, startTransition] = useTransition();
+
+  // Prefer Google's own button on our origin, which makes the consent screen
+  // name enroute.website rather than the Supabase project host. Falls back to
+  // the Supabase redirect flow when the client id isn't configured, so this
+  // never leaves the page without a Google option.
+  if (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+    return <GoogleIdentityButton text={label.startsWith("Sign up") ? "signup_with" : "continue_with"} />;
+  }
 
   return (
     <form action={() => startTransition(async () => void (await signInWithGoogle()))}>
