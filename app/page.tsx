@@ -9,7 +9,6 @@ import { getLatestAnalysis } from "@/lib/db/analyses";
 import type { AcademicAnalysis, ExtracurricularAnalysis } from "@/lib/ai/schemas";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FounderSection } from "@/components/home/FounderSection";
 
 const RETURNING_GREETINGS = [
   (name: string) => `Welcome back, ${name}`,
@@ -177,7 +176,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <FounderSection />
       </div>
     );
   }
@@ -246,7 +244,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <FounderSection />
       </div>
     );
   }
@@ -279,7 +276,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <FounderSection />
     </div>
   );
 }

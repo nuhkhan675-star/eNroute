@@ -38,7 +38,9 @@ export default function ContactPage() {
     <div className="mx-auto w-full max-w-3xl px-6 py-14">
       <h1 className="text-3xl font-semibold tracking-tight">Contact</h1>
       <p className="mt-2 text-muted-foreground">
-        eNroute is built and run by one person, so this goes straight to a real inbox.
+        eNroute is built and run by{" "}
+        <span className="font-semibold text-primary">one person</span> &mdash; so this goes straight to
+        a real inbox, and gets a real reply.
       </p>
 
       {/* Who "one person" is. The homepage says this at the bottom, but someone
