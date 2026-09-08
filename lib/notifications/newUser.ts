@@ -21,6 +21,58 @@ const TO = process.env.SIGNUP_NOTIFICATION_EMAIL ?? "enrouteuniadvisor@gmail.com
 // up and mail can go anywhere.
 const FROM = process.env.SIGNUP_NOTIFICATION_FROM ?? "eNroute <onboarding@resend.dev>";
 
+/**
+ * Notify for an account created outside the password form -- Google, or an
+ * emailed code. Supabase creates those users itself, so there is no point in
+ * our code that inherently knows "this one is new"; we have to ask.
+ *
+ * Exactly-once is enforced with a flag on app_metadata, which only the service
+ * role can write, so a returning user can never re-trigger it and a curious
+ * one can't fake it. The flag is set BEFORE sending: a notification that goes
+ * missing is a nuisance, but a broken flag with a working send would email on
+ * every single login.
+ */
+export async function notifyIfNewSignup(user: {
+  id: string;
+  email?: string | null;
+  app_metadata?: Record<string, unknown> | null;
+  user_metadata?: Record<string, unknown> | null;
+}): Promise<void> {
+  if (!API_KEY) return;
+  if (user.app_metadata?.signup_notified) return;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    console.error("[signup-notify] service role key missing; skipping to avoid notifying on every login");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${url}/auth/v1/admin/users/${user.id}`, {
+      method: "PUT",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ app_metadata: { ...(user.app_metadata ?? {}), signup_notified: true } }),
+    });
+    if (!res.ok) {
+      console.error(`[signup-notify] couldn't mark user as notified (${res.status}); not sending`);
+      return;
+    }
+  } catch (err) {
+    console.error("[signup-notify] marking failed", err instanceof Error ? err.message : err);
+    return;
+  }
+
+  await notifyNewSignup({
+    name: String(user.user_metadata?.full_name ?? ""),
+    email: user.email ?? "(unknown)",
+  });
+}
+
 export async function notifyNewSignup(params: { name: string; email: string }): Promise<void> {
   if (!API_KEY) return;
 

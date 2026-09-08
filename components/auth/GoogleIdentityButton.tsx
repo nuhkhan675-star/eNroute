@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
+import { notifySignupIfNew } from "@/lib/actions/auth";
 
 /**
  * Google sign-in rendered by Google Identity Services, on our own origin.
@@ -63,6 +64,10 @@ export function GoogleIdentityButton({ text = "continue_with" }: { text?: string
         setError(signInError.message);
         return;
       }
+      // Google creates the account inside Supabase, so this is the first
+      // moment our code can tell the operator about a new one.
+      await notifySignupIfNew();
+
       // The session lives in cookies the server can read, but the pages that
       // matter are server-rendered -- refresh so they re-render signed in.
       router.replace("/dashboard");

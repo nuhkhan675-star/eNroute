@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
-import { notifyNewSignup } from "@/lib/notifications/newUser";
+import { notifyNewSignup, notifyIfNewSignup } from "@/lib/notifications/newUser";
 
 /** Where password-reset and magic-link emails send people back to. */
 function siteUrl(): string {
@@ -241,6 +241,23 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   if (!data.url) return { error: "Couldn't start Google sign-in. Try again." };
 
   redirect(data.url);
+}
+
+/**
+ * Fire the operator notification if the signed-in user has never triggered
+ * one. Safe to call after any sign-in: notifyIfNewSignup() is a no-op for
+ * anyone already marked, so returning users cost one metadata read.
+ *
+ * Called from the client after a Google Identity sign-in, where the account
+ * is created inside Supabase with no server round trip of our own.
+ */
+export async function notifySignupIfNew(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await notifyIfNewSignup(user);
 }
 
 export async function signOut() {
