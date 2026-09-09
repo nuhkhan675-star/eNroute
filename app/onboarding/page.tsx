@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getCurricula, getProgramCategories, getCountries } from "@/lib/db/reference";
 import { getExistingOnboardingDraft, getProfileVersions } from "@/lib/db/onboarding";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export default async function OnboardingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/signup");
 
   const [curricula, categories, countries, existingDraft, profileVersions] = await Promise.all([

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BrandN } from "@/components/layout/Logo";
 import { HomeScrollHero } from "@/components/home/HomeScrollHero";
 import { Database, Brain, MessageCircle, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUserFullName } from "@/lib/db/users";
 import { getLatestAnalysis } from "@/lib/db/analyses";
@@ -55,10 +55,7 @@ const PILLARS = [
 ];
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const profile = user ? await getProfileByUserId(user.id) : null;
   const fullName = user ? await getUserFullName(user.id) : null;

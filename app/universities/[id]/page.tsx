@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getUniversityWithPrograms, getUniversitiesForAnalysis } from "@/lib/db/universities";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUniversityAnalysis } from "@/lib/db/analyses";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,10 +23,7 @@ export default async function UniversityDetailPage({
   const university = await getUniversityWithPrograms(id);
   if (!university) notFound();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const profile = user ? await getProfileByUserId(user.id) : null;
 
   // Cache-only read -- never triggers a Gemini call just from viewing this

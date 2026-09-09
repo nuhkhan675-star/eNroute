@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getSavedUniversities } from "@/lib/db/saved";
 import { getCountries } from "@/lib/db/reference";
@@ -11,10 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bookmark, Globe, TrendingUp } from "lucide-react";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const profile = await getProfileByUserId(user.id);

@@ -10,7 +10,7 @@ import {
   type UniversityCardExtras,
 } from "@/lib/db/universities";
 import { getCountryById, getProgramCategories } from "@/lib/db/reference";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUniversityAnalysesByUniversity, type UniversityAnalysisRecord } from "@/lib/db/analyses";
 import { getDashboardMatches } from "@/lib/db/dashboard";
@@ -66,10 +66,7 @@ export default async function UniversitiesPage({
     const [countryRow, categories] = await Promise.all([getCountryById(country), getProgramCategories()]);
     if (!countryRow) notFound();
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const profile = user ? await getProfileByUserId(user.id) : null;
 
     // Never filter the list by field of interest automatically -- our
@@ -156,10 +153,7 @@ export default async function UniversitiesPage({
   }
 
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const profile = user ? await getProfileByUserId(user.id) : null;
 
   // The unified "recommended for you" feed -- every university matching the

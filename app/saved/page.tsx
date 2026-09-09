@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getSavedUniversities } from "@/lib/db/saved";
 import { UniversityPhoto } from "@/components/universities/UniversityPhoto";
@@ -10,10 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Bookmark } from "lucide-react";
 
 export default async function SavedSchoolsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const profile = await getProfileByUserId(user.id);

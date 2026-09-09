@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUniversityWithPrograms, getUniversityCardExtras } from "@/lib/db/universities";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUniversityAnalysis } from "@/lib/db/analyses";
 import { CATEGORY_LABELS, chancePoint } from "@/lib/ai/prediction/scoringEngine";
@@ -28,10 +28,7 @@ export default async function ComparePage({
   const ids = (idsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, MAX_COMPARE);
   if (ids.length < 2) notFound();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const profile = user ? await getProfileByUserId(user.id) : null;
 
   const universities = await Promise.all(ids.map((id) => getUniversityWithPrograms(id)));
