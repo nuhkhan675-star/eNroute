@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { updatePassword, type AuthResult } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,10 +30,9 @@ export default function ResetPasswordPage() {
           >
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">New password</Label>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -41,10 +40,9 @@ export default function ResetPasswordPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="confirmPassword">Confirm new password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
                 required
                 minLength={8}
                 autoComplete="new-password"

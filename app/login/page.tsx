@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { GoogleButton } from "@/components/auth/GoogleButton";
@@ -48,7 +49,7 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <Input id="password" name="password" type="password" required autoComplete="current-password" />
+              <PasswordInput id="password" name="password" required autoComplete="current-password" />
             </div>
             <TurnstileWidget />
             {result?.error && <p className="text-sm text-destructive">{result.error}</p>}

@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { GoogleButton } from "@/components/auth/GoogleButton";
@@ -117,14 +118,13 @@ export default function SignupPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
+              <PasswordInput id="password" name="password" required minLength={8} autoComplete="new-password" />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
                 required
                 minLength={8}
                 autoComplete="new-password"

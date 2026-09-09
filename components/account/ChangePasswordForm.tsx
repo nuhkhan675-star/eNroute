@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { changePassword, type AuthResult } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
 
 export function ChangePasswordForm() {
@@ -27,20 +27,18 @@ export function ChangePasswordForm() {
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="currentPassword">Current password</Label>
-        <Input
+        <PasswordInput
           id="currentPassword"
           name="currentPassword"
-          type="password"
           required
           autoComplete="current-password"
         />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">New password</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           minLength={8}
           autoComplete="new-password"
