@@ -3,7 +3,6 @@ import { BrandN } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Starfield } from "@/components/home/Starfield";
 import { Globe } from "@/components/home/Globe";
-import { FloatingOdds } from "@/components/home/FloatingOdds";
 import { Reveal } from "@/components/home/Reveal";
 import { ArrowRight, BarChart3, FileText, Globe2, Search, Sparkles } from "lucide-react";
 
@@ -115,9 +114,6 @@ export function LandingPage() {
       {/* ---------------------------------------------------------------- hero */}
       <section className="relative flex min-h-[calc(100vh-4rem)] w-full items-center px-6 py-20">
         <Starfield className="pointer-events-none absolute inset-0 -z-20 size-full" />
-        {/* The globe sits behind the copy, large and dim: it should register as
-            "this is global" at a glance without competing with the headline. */}
-        <Globe className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2 opacity-55" />
         <div
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] opacity-70"
           style={{
@@ -125,62 +121,72 @@ export function LandingPage() {
               "radial-gradient(55% 45% at 50% 12%, color-mix(in oklch, var(--primary), transparent 82%), transparent)",
           }}
         />
-        <FloatingOdds />
 
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-7 text-center">
-          <Reveal>
-            <p className="text-5xl font-bold tracking-tight sm:text-6xl">
-              e<BrandN className="drop-shadow-[0_0_22px_color-mix(in_oklch,var(--primary),transparent_65%)]" />
-              route
-            </p>
-          </Reveal>
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_auto]">
+          <div className="flex flex-col items-center gap-7 text-center lg:items-start lg:text-left">
+            <Reveal>
+              <p className="text-5xl font-bold tracking-tight sm:text-6xl">
+                e<BrandN className="drop-shadow-[0_0_22px_color-mix(in_oklch,var(--primary),transparent_65%)]" />
+                route
+              </p>
+            </Reveal>
 
-          <Reveal delay={80}>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Know where you actually fit.</h1>
-            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              Admission chance estimates across six countries, read from your curriculum on its own
-              terms — and shown with the reasoning behind every number.
-            </p>
-          </Reveal>
+            <Reveal delay={80}>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Know where you actually fit.</h1>
+              <p className="mt-3 max-w-xl text-muted-foreground">
+                Admission chance estimates across six countries, read from your curriculum on its own
+                terms — and shown with the reasoning behind every number.
+              </p>
+            </Reveal>
 
-          <Reveal delay={160}>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-                <Globe2 className="size-3.5" /> Covering
-              </span>
-              {COUNTRIES.map((c) => (
-                <span
-                  key={c}
-                  className="rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
-                >
-                  {c}
+            <Reveal delay={160}>
+              <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
+                  <Globe2 className="size-3.5" /> Covering
                 </span>
-              ))}
-            </div>
-          </Reveal>
+                {COUNTRIES.map((c) => (
+                  <span
+                    key={c}
+                    className="rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
 
-          <Reveal delay={240}>
-            <div className="flex flex-col items-center gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                className="h-12 gap-2 px-8 text-base shadow-[0_0_18px_-8px_var(--primary)] transition-shadow hover:shadow-[0_0_30px_-6px_var(--primary)]"
-                nativeButton={false}
-                render={
-                  <Link href="/signup">
-                    Sign in to get started <ArrowRight className="size-4" />
-                  </Link>
-                }
-              />
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 px-6 text-base"
-                nativeButton={false}
-                render={<Link href="/about">How it works</Link>}
-              />
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">Free to use. No card, no consultant.</p>
-          </Reveal>
+            <Reveal delay={240}>
+              <div className="flex flex-col items-center gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  className="h-12 gap-2 px-8 text-base shadow-[0_0_18px_-8px_var(--primary)] transition-shadow hover:shadow-[0_0_30px_-6px_var(--primary)]"
+                  nativeButton={false}
+                  render={
+                    <Link href="/signup">
+                      Sign in to get started <ArrowRight className="size-4" />
+                    </Link>
+                  }
+                />
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-6 text-base"
+                  nativeButton={false}
+                  render={<Link href="/about">How it works</Link>}
+                />
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Free to use. No card, no consultant.</p>
+            </Reveal>
+          </div>
+
+          {/* Its own column rather than a background layer: it's draggable now,
+              so it needs to not sit under the headline and swallow clicks. */}
+          <div className="relative flex justify-center lg:justify-end">
+            <Globe className="aspect-square w-[min(88vw,34rem)]" />
+            <span className="pointer-events-none absolute bottom-0 text-[11px] text-muted-foreground/70">
+              Drag to spin
+            </span>
+          </div>
         </div>
       </section>
 

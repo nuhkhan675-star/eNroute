@@ -62,7 +62,7 @@ for (const [iso, id] of Object.entries(HIGHLIGHT)) {
 // A coarse land/sea grid, for the rotating globe in the hero. Stored as a
 // base64 bitmask rather than coordinates: 7,200 cells is 900 bytes packed
 // against roughly 30KB as a list of lat/lon pairs.
-const STEP = 3;
+const STEP = 1.5;
 const LON_CELLS = 360 / STEP;
 const LAT_CELLS = 180 / STEP;
 const bits = new Uint8Array(Math.ceil((LON_CELLS * LAT_CELLS) / 8));
