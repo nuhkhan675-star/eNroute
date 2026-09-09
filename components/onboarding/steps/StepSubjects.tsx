@@ -75,6 +75,11 @@ const IB_GROUPS = [
 const IB_CORE_KEYS = ["Extended Essay", "Theory of Knowledge"];
 const IB_SUBJECT_COUNT = 6;
 
+// Ceiling for the non-IB curricula, which have no single fixed count -- three
+// or four A Levels, a handful of APs, a fuller CBSE slate. Generous enough not
+// to block a real record, tight enough that nobody submits forty rows.
+const MAX_SUBJECTS = 12;
+
 interface Props {
   curricula: Curriculum[];
   onNext: () => void;
@@ -158,11 +163,15 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
     const currentIbRows = ibRows ?? [];
     const coreRows = IB_CORE_KEYS.map((k) => coreSelection[k]);
     const ibHasDuplicates = hasDuplicateSubjects(currentIbRows);
+    // A restored draft can exceed the cap even though the button now prevents
+    // it, so Continue checks rather than trusting the UI.
+    const ibTooMany = currentIbRows.length > IB_SUBJECT_COUNT;
     const canContinue =
       currentIbRows.length > 0 &&
       currentIbRows.every(rowIsComplete) &&
       coreRows.every((r) => r && rowIsComplete(r)) &&
-      !ibHasDuplicates;
+      !ibHasDuplicates &&
+      !ibTooMany;
 
     // Subjects the student can pick from, still organized by IB group in the
     // dropdown for findability -- but any combination is allowed (two
@@ -296,8 +305,18 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
             );
           })}
 
-          <Button type="button" variant="secondary" onClick={addIbRow}>
-            + Add another subject
+          {/* The diploma is six subjects, full stop -- EE and TOK are entered
+              separately below and aren't part of the six. Anything beyond this
+              isn't a diploma we can score. */}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={addIbRow}
+            disabled={currentIbRows.length >= IB_SUBJECT_COUNT}
+          >
+            {currentIbRows.length >= IB_SUBJECT_COUNT
+              ? `${IB_SUBJECT_COUNT} subjects added`
+              : "+ Add another subject"}
           </Button>
 
           {IB_CORE_KEYS.map((key) => {
@@ -344,6 +363,14 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
             </p>
           )}
 
+          {ibTooMany && (
+            <p className="text-sm text-destructive">
+              The IB Diploma is {IB_SUBJECT_COUNT} subjects. Remove{" "}
+              {currentIbRows.length - IB_SUBJECT_COUNT} to continue &mdash; the Extended Essay and
+              Theory of Knowledge are entered separately below.
+            </p>
+          )}
+
           <div className="flex justify-between pt-2">
             <Button variant="outline" onClick={onBack}>
               Back
@@ -358,7 +385,8 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
   }
 
   const hasDuplicates = hasDuplicateSubjects(rows);
-  const canContinue = rows.length > 0 && rows.every(rowIsComplete) && !hasDuplicates;
+  const tooMany = rows.length > MAX_SUBJECTS;
+  const canContinue = rows.length > 0 && rows.every(rowIsComplete) && !hasDuplicates && !tooMany;
 
   const handleNext = () => {
     const entries: SubjectEntry[] = rows.map((row) => {
@@ -463,13 +491,19 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
           );
         })}
 
-        <Button type="button" variant="secondary" onClick={addRow}>
-          + Add another subject
+        <Button type="button" variant="secondary" onClick={addRow} disabled={rows.length >= MAX_SUBJECTS}>
+          {rows.length >= MAX_SUBJECTS ? `Maximum ${MAX_SUBJECTS} subjects` : "+ Add another subject"}
         </Button>
 
         {hasDuplicates && (
           <p className="text-sm text-destructive">
             You&apos;ve listed the same subject more than once. Remove the duplicate rows to continue.
+          </p>
+        )}
+
+        {tooMany && (
+          <p className="text-sm text-destructive">
+            Remove {rows.length - MAX_SUBJECTS} to continue &mdash; {MAX_SUBJECTS} subjects is the maximum.
           </p>
         )}
 

@@ -30,6 +30,8 @@ const SUBJECT_GRADE_OVERRIDE: Record<string, string[]> = {
   "Core Mathematics": ["C", "D", "E", "F", "G", "U"],
 };
 
+const MAX_SUBJECTS_PER_YEAR = 12;
+
 /**
  * Grade 11 belongs to the senior curriculum, not the secondary board.
  *
@@ -168,8 +170,18 @@ function GradeYearSection({
           </div>
         );
       })}
-      <Button type="button" variant="secondary" size="sm" onClick={addRow}>
-        + Add another subject
+      {/* A heavy IGCSE or CBSE candidate sits around ten subjects; twelve
+          leaves room without letting the list run away. */}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={addRow}
+        disabled={rows.length >= MAX_SUBJECTS_PER_YEAR}
+      >
+        {rows.length >= MAX_SUBJECTS_PER_YEAR
+          ? `Maximum ${MAX_SUBJECTS_PER_YEAR} subjects`
+          : "+ Add another subject"}
       </Button>
     </div>
   );
