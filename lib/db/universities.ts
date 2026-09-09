@@ -371,28 +371,51 @@ export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST
     return (b.row.acceptanceRate ?? -1) - (a.row.acceptanceRate ?? -1);
   };
 
-  const buckets = new Map<SelectivityTier, typeof classified>();
-  for (const t of ORDER) buckets.set(t, []);
-  for (const c of classified) buckets.get(c.sel.tier)!.push(c);
-  for (const t of ORDER) buckets.get(t)!.sort(rank);
+  // Stratified pick over one pool: an even quota per tier, then redistribute
+  // whatever thin tiers can't fill, so the list reaches `n` rather than
+  // showing gaps.
+  const gather = (pool: typeof classified, n: number): typeof classified => {
+    const buckets = new Map<SelectivityTier, typeof classified>();
+    for (const t of ORDER) buckets.set(t, []);
+    for (const c of pool) buckets.get(c.sel.tier)!.push(c);
+    for (const t of ORDER) buckets.get(t)!.sort(rank);
 
-  // Even quota per tier, then redistribute whatever thin tiers can't fill so
-  // the list still reaches `limit` rather than showing gaps.
-  const quota = Math.ceil(limit / ORDER.length);
-  const picked: typeof classified = [];
-  const cursor = new Map<SelectivityTier, number>(ORDER.map((t) => [t, 0]));
-  for (const t of ORDER) {
-    const bucket = buckets.get(t)!;
-    const take = bucket.slice(0, quota);
-    picked.push(...take);
-    cursor.set(t, take.length);
-  }
-  for (const t of ORDER) {
-    if (picked.length >= limit) break;
-    const bucket = buckets.get(t)!;
-    let i = cursor.get(t)!;
-    while (picked.length < limit && i < bucket.length) picked.push(bucket[i++]);
-    cursor.set(t, i);
+    const quota = Math.ceil(n / ORDER.length);
+    const out: typeof classified = [];
+    const cursor = new Map<SelectivityTier, number>(ORDER.map((t) => [t, 0]));
+    for (const t of ORDER) {
+      const bucket = buckets.get(t)!;
+      const take = bucket.slice(0, quota);
+      out.push(...take);
+      cursor.set(t, take.length);
+    }
+    for (const t of ORDER) {
+      if (out.length >= n) break;
+      const bucket = buckets.get(t)!;
+      let i = cursor.get(t)!;
+      while (out.length < n && i < bucket.length) out.push(bucket[i++]);
+      cursor.set(t, i);
+    }
+    return out.slice(0, n);
+  };
+
+  // Universities we hold a real campus photo for are picked first -- a grid of
+  // grey placeholders reads as a broken product. It is a preference, not a
+  // filter: photo coverage is 19%, and a student targeting only Australia has
+  // six such universities in total, so a hard filter would hand them six
+  // recommendations instead of twenty. Whatever the photo pool can't fill is
+  // topped up from the rest, still stratified across tiers.
+  const picked = gather(
+    classified.filter((c) => c.row.hasPhoto),
+    limit,
+  );
+  if (picked.length < limit) {
+    picked.push(
+      ...gather(
+        classified.filter((c) => !c.row.hasPhoto),
+        limit - picked.length,
+      ),
+    );
   }
 
   // Emit in tier order: Likely -> ... -> hardest reach.
