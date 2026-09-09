@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandN } from "@/components/layout/Logo";
-import { HomeScrollHero } from "@/components/home/HomeScrollHero";
-import { Database, Brain, MessageCircle, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { LandingPage } from "@/components/home/LandingPage";
+import { ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUserFullName } from "@/lib/db/users";
@@ -29,38 +29,12 @@ function randomGreeting(templates: ((name: string) => string)[], name: string): 
   return templates[Math.floor(Math.random() * templates.length)](name);
 }
 
-// Each pillar carries its own accent. Three identical blue icons read as one
-// block; distinct hues let the eye pick out the one it wants. All three are
-// drawn from the accent set already used for the Reach/Target/Likely badges,
-// so nothing new enters the palette.
-const PILLARS = [
-  {
-    icon: Database,
-    tone: "text-sky-300 bg-sky-400/10 ring-sky-400/20",
-    title: "Built on real data",
-    body: "University, program, tuition, and admissions facts come from a structured database with sources and verification dates — never invented.",
-  },
-  {
-    icon: Brain,
-    tone: "text-violet-300 bg-violet-400/10 ring-violet-400/20",
-    title: "AI that explains, not guesses",
-    body: "Specialist analysts evaluate your academics, activities, and major fit. Classification into Reach, Target, or Likely is computed, not improvised.",
-  },
-  {
-    icon: MessageCircle,
-    tone: "text-emerald-300 bg-emerald-400/10 ring-emerald-400/20",
-    title: "An advisor that knows your profile",
-    body: "Every estimate comes with the reasoning behind it — strengths, gaps, and what to do next, tied to that specific university rather than generic advice.",
-  },
-];
-
 export default async function Home() {
   const user = await getCurrentUser();
 
   const profile = user ? await getProfileByUserId(user.id) : null;
   const fullName = user ? await getUserFullName(user.id) : null;
   const firstName = fullName?.split(" ")[0] ?? null;
-  const primaryHref = user ? "/onboarding" : "/signup";
 
   let academic: AcademicAnalysis | null = null;
   let extracurricular: ExtracurricularAnalysis | null = null;
@@ -245,34 +219,5 @@ export default async function Home() {
     );
   }
 
-  return (
-    <div className="flex flex-1 flex-col overflow-x-clip">
-      {/* Scroll-scrubbed opening sequence: one pinned timeline the scrollbar
-          scrubs, replacing the previous static hero. Everything below it is
-          unchanged and resumes normal page flow. */}
-      <HomeScrollHero
-        primaryHref={primaryHref}
-        greeting={firstName ? randomGreeting(FIRST_TIME_GREETINGS, firstName) : null}
-      />
-
-      <section className="relative w-full border-t border-border bg-gradient-to-b from-transparent to-primary/5 px-6 py-28">
-        <div className="mx-auto grid w-full max-w-6xl gap-6 sm:grid-cols-3">
-          {PILLARS.map((p) => (
-            <div
-              key={p.title}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 transition-colors hover:border-primary/40"
-            >
-              <div className="pointer-events-none absolute -top-16 -right-16 size-40 rounded-full bg-primary/10 blur-3xl transition-opacity group-hover:opacity-100 opacity-0" />
-              <span className={`inline-flex size-12 items-center justify-center rounded-xl ring-1 ${p.tone}`}>
-                <p.icon className="size-6" strokeWidth={1.75} />
-              </span>
-              <h2 className="mt-5 text-lg font-semibold">{p.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-    </div>
-  );
+  return <LandingPage />;
 }

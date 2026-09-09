@@ -187,3 +187,15 @@
     color-scheme: dark;
   }
 }
+/* Gentle vertical drift for the hero's floating odds cards. Small amplitude on
+   purpose: they sit beside the headline and are meant to feel alive, not to
+   pull the eye off it. */
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
