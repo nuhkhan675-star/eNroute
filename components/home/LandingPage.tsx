@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandN } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Starfield } from "@/components/home/Starfield";
+import { Globe } from "@/components/home/Globe";
 import { FloatingOdds } from "@/components/home/FloatingOdds";
 import { Reveal } from "@/components/home/Reveal";
 import { ArrowRight, BarChart3, FileText, Globe2, Search, Sparkles } from "lucide-react";
@@ -113,7 +114,10 @@ export function LandingPage() {
     <div className="flex flex-1 flex-col overflow-x-clip">
       {/* ---------------------------------------------------------------- hero */}
       <section className="relative flex min-h-[calc(100vh-4rem)] w-full items-center px-6 py-20">
-        <Starfield className="pointer-events-none absolute inset-0 -z-10 size-full" />
+        <Starfield className="pointer-events-none absolute inset-0 -z-20 size-full" />
+        {/* The globe sits behind the copy, large and dim: it should register as
+            "this is global" at a glance without competing with the headline. */}
+        <Globe className="pointer-events-none absolute left-1/2 top-1/2 -z-10 aspect-square w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2 opacity-55" />
         <div
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] opacity-70"
           style={{
