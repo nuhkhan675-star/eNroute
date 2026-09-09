@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import { getGradeOptionsForScale } from "@/lib/utils/grades";
-import type { Country } from "@/lib/db/reference";
+import type { Country, Curriculum } from "@/lib/db/reference";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,25 @@ const BOARD_GRADE_SCALE: Record<string, string> = {
 
 const SUBJECT_GRADE_OVERRIDE: Record<string, string[]> = {
   "Core Mathematics": ["C", "D", "E", "F", "G", "U"],
+};
+
+/**
+ * Grade 11 belongs to the senior curriculum, not the secondary board.
+ *
+ * An IB student sits IGCSEs in grades 9-10 and then starts the diploma in
+ * grade 11 -- so their grade 11 results are on the 1-7 scale, not A*-G. The
+ * board dropdown on this step only governs grades 9 and 10; grade 11 follows
+ * whichever curriculum was chosen earlier in onboarding.
+ */
+const CURRICULUM_GRADE_SCALE: Record<string, string> = {
+  IB: "1-7",
+  A_LEVELS: "A*-E",
+  AP: "1-5",
+  US_HS_DIPLOMA: "A-F",
+  AU_CURRICULUM: "A-E",
+  CBSE: "0-100",
+  ICSE: "0-100",
+  ISC: "0-100",
 };
 
 interface Row {
@@ -60,20 +79,21 @@ const GRADE_WEIGHT_NOTES: Record<number, Partial<Record<string, string>>> = {
 
 function GradeYearSection({
   label,
-  board,
+  gradeScale,
   rows,
   setRows,
   onCommit,
   note,
 }: {
   label: string;
-  board: string | null;
+  /** Which scale this year's grades are on -- the secondary board for 9 and 10, the senior curriculum for 11. */
+  gradeScale: string;
   rows: Row[];
   setRows: (updater: (prev: Row[]) => Row[]) => void;
   onCommit: (rows: Row[]) => void;
   note?: string;
 }) {
-  const boardGradeOptions = getGradeOptionsForScale(board ? BOARD_GRADE_SCALE[board] : "0-100");
+  const boardGradeOptions = getGradeOptionsForScale(gradeScale);
   const gradeOptionsFor = (subjectName: string) => SUBJECT_GRADE_OVERRIDE[subjectName] ?? boardGradeOptions;
 
   const updateRow = (rowId: string, patch: Partial<Row>) => {
@@ -157,12 +177,21 @@ function GradeYearSection({
 
 interface Props {
   countries: Country[];
+  curricula: Curriculum[];
   onNext: () => void;
   onBack: () => void;
 }
 
-export function StepSecondaryGrades({ countries, onNext, onBack }: Props) {
+export function StepSecondaryGrades({ countries, curricula, onNext, onBack }: Props) {
   const grade10Board = useOnboardingStore((s) => s.draft.grade10Board ?? null);
+  const curriculumId = useOnboardingStore((s) => s.draft.curriculumId);
+
+  // Grades 9 and 10 follow the secondary board picked below; grade 11 follows
+  // the senior curriculum picked at the start of onboarding.
+  const seniorCurriculum = curricula.find((c) => c.id === curriculumId);
+  const secondaryScale = grade10Board ? BOARD_GRADE_SCALE[grade10Board] : "0-100";
+  const seniorScale = (seniorCurriculum && CURRICULUM_GRADE_SCALE[seniorCurriculum.code]) ?? secondaryScale;
+  const grade11Label = seniorCurriculum ? `Grade 11 (${seniorCurriculum.name})` : "Grade 11";
   const setGrade10Board = useOnboardingStore((s) => s.setGrade10Board);
   const setGrade9Subjects = useOnboardingStore((s) => s.setGrade9Subjects);
   const setGrade10Subjects = useOnboardingStore((s) => s.setGrade10Subjects);
@@ -218,7 +247,7 @@ export function StepSecondaryGrades({ countries, onNext, onBack }: Props) {
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <Label>Board / curriculum (grades 9-11)</Label>
+          <Label>Board / curriculum (grades 9 and 10)</Label>
           <Select
             items={Object.fromEntries(GRADE_10_BOARDS.map((b) => [b, b]))}
             value={grade10Board}
@@ -246,10 +275,10 @@ export function StepSecondaryGrades({ countries, onNext, onBack }: Props) {
           9th grade — optional, adding this helps strengthen your analysis
         </button>
         {show9 && (
-          <GradeYearSection label="Grade 9" board={grade10Board} rows={rows9} setRows={setRows9} onCommit={() => {}} note={noteFor(9)} />
+          <GradeYearSection label="Grade 9" gradeScale={secondaryScale} rows={rows9} setRows={setRows9} onCommit={() => {}} note={noteFor(9)} />
         )}
 
-        <GradeYearSection label="Grade 10 (required)" board={grade10Board} rows={rows10} setRows={setRows10} onCommit={() => {}} />
+        <GradeYearSection label="Grade 10 (required)" gradeScale={secondaryScale} rows={rows10} setRows={setRows10} onCommit={() => {}} />
 
         <button
           type="button"
@@ -260,7 +289,7 @@ export function StepSecondaryGrades({ countries, onNext, onBack }: Props) {
           11th grade — optional, adding this helps strengthen your analysis
         </button>
         {show11 && (
-          <GradeYearSection label="Grade 11" board={grade10Board} rows={rows11} setRows={setRows11} onCommit={() => {}} note={noteFor(11)} />
+          <GradeYearSection label={grade11Label} gradeScale={seniorScale} rows={rows11} setRows={setRows11} onCommit={() => {}} note={noteFor(11)} />
         )}
 
         <div className="flex justify-between pt-2">

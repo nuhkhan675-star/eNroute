@@ -70,7 +70,7 @@ export function OnboardingWizard({ curricula, categories, countries, existingDra
         <StepTargetCountries countries={countries} onNext={goNext} onBack={goBack} />
       )}
       {step === "secondaryGrades" && (
-        <StepSecondaryGrades countries={countries} onNext={goNext} onBack={goBack} />
+        <StepSecondaryGrades countries={countries} curricula={curricula} onNext={goNext} onBack={goBack} />
       )}
       {step === "fieldOfInterest" && (
         <StepFieldOfInterest categories={categories} onNext={goNext} onBack={goBack} />

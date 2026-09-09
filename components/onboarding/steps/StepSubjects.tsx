@@ -32,6 +32,21 @@ function makeEmptyRow(): Row {
   return { rowId: crypto.randomUUID(), subjectId: null, level: null, grade: null };
 }
 
+/**
+ * Nobody takes the same subject twice, and six rows of English A: Literature
+ * would be scored as a real diploma. Two defences: the dropdown hides subjects
+ * already chosen in another row, and Continue checks anyway -- a draft
+ * restored from storage can contain duplicates the dropdown never saw.
+ */
+function subjectsTakenByOtherRows(rows: Row[], rowId: string): Set<string> {
+  return new Set(rows.filter((r) => r.rowId !== rowId && r.subjectId).map((r) => r.subjectId!));
+}
+
+function hasDuplicateSubjects(rows: Row[]): boolean {
+  const chosen = rows.map((r) => r.subjectId).filter(Boolean);
+  return new Set(chosen).size !== chosen.length;
+}
+
 function buildInitialRows(stored: SubjectEntry[], expectedCount: number): Row[] {
   const fromStored: Row[] = stored.map((s) => ({
     rowId: crypto.randomUUID(),
@@ -142,20 +157,17 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
   if (isIB) {
     const currentIbRows = ibRows ?? [];
     const coreRows = IB_CORE_KEYS.map((k) => coreSelection[k]);
+    const ibHasDuplicates = hasDuplicateSubjects(currentIbRows);
     const canContinue =
       currentIbRows.length > 0 &&
       currentIbRows.every(rowIsComplete) &&
-      coreRows.every((r) => r && rowIsComplete(r));
+      coreRows.every((r) => r && rowIsComplete(r)) &&
+      !ibHasDuplicates;
 
     // Subjects the student can pick from, still organized by IB group in the
     // dropdown for findability -- but any combination is allowed (two
     // Sciences and no Arts is a perfectly normal diploma).
     const selectableSubjects = available.filter((s) => !IB_CORE_KEYS.includes(s.name));
-    const groupedSubjects = IB_GROUPS.map((group) => ({
-      group,
-      subjects: selectableSubjects.filter((s) => s.subject_group === group),
-    })).filter((g) => g.subjects.length > 0);
-    const ungrouped = selectableSubjects.filter((s) => !IB_GROUPS.includes(s.subject_group ?? ""));
 
     const updateIbRow = (rowId: string, patch: Partial<Row>) =>
       setIbRows((prev) => (prev ?? []).map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)));
@@ -188,10 +200,20 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
             const levelOptions = selectedSubject?.available_levels ?? [];
             const gradeOptions = selectedSubject ? getGradeOptionsForScale(selectedSubject.grade_scale) : [];
 
+            // Subjects already used elsewhere are removed from this row's list,
+            // so a duplicate can't be picked in the first place.
+            const taken = subjectsTakenByOtherRows(currentIbRows, row.rowId);
+            const rowSubjects = selectableSubjects.filter((s) => !taken.has(s.id));
+            const rowGrouped = IB_GROUPS.map((group) => ({
+              group,
+              subjects: rowSubjects.filter((s) => s.subject_group === group),
+            })).filter((g) => g.subjects.length > 0);
+            const rowUngrouped = rowSubjects.filter((s) => !IB_GROUPS.includes(s.subject_group ?? ""));
+
             return (
               <div key={row.rowId} className="grid items-center gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
                 <Select
-                  items={Object.fromEntries(selectableSubjects.map((s) => [s.id, s.name]))}
+                  items={Object.fromEntries(rowSubjects.map((s) => [s.id, s.name]))}
                   value={row.subjectId}
                   onValueChange={(v) => updateIbRow(row.rowId, { subjectId: v, level: null, grade: null })}
                   disabled={loading}
@@ -200,7 +222,7 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
                     <SelectValue placeholder={loading ? "Loading…" : "Subject"} />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {groupedSubjects.map(({ group, subjects }) => (
+                    {rowGrouped.map(({ group, subjects }) => (
                       <SelectGroup key={group}>
                         <SelectLabel>{group}</SelectLabel>
                         {subjects.map((s) => (
@@ -210,10 +232,10 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
                         ))}
                       </SelectGroup>
                     ))}
-                    {ungrouped.length > 0 && (
+                    {rowUngrouped.length > 0 && (
                       <SelectGroup>
                         <SelectLabel>Other</SelectLabel>
-                        {ungrouped.map((s) => (
+                        {rowUngrouped.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.name}
                           </SelectItem>
@@ -316,6 +338,12 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
             </Label>
           </div>
 
+          {ibHasDuplicates && (
+            <p className="text-sm text-destructive">
+              You&apos;ve listed the same subject more than once. Remove the duplicate rows to continue.
+            </p>
+          )}
+
           <div className="flex justify-between pt-2">
             <Button variant="outline" onClick={onBack}>
               Back
@@ -329,7 +357,8 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
     );
   }
 
-  const canContinue = rows.length > 0 && rows.every(rowIsComplete);
+  const hasDuplicates = hasDuplicateSubjects(rows);
+  const canContinue = rows.length > 0 && rows.every(rowIsComplete) && !hasDuplicates;
 
   const handleNext = () => {
     const entries: SubjectEntry[] = rows.map((row) => {
@@ -360,11 +389,13 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
           const selectedSubject = available.find((s) => s.id === row.subjectId);
           const levelOptions = selectedSubject?.available_levels ?? [];
           const gradeOptions = selectedSubject ? getGradeOptionsForScale(selectedSubject.grade_scale) : [];
+          const taken = subjectsTakenByOtherRows(rows, row.rowId);
+          const rowSubjects = available.filter((s) => !taken.has(s.id));
 
           return (
             <div key={row.rowId} className="grid items-center gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
               <Select
-                items={Object.fromEntries(available.map((s) => [s.id, s.name]))}
+                items={Object.fromEntries(rowSubjects.map((s) => [s.id, s.name]))}
                 value={row.subjectId}
                 onValueChange={(v) => updateRow(row.rowId, { subjectId: v, level: null, grade: null })}
                 disabled={loading}
@@ -373,7 +404,7 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
                   <SelectValue placeholder={loading ? "Loading subjects…" : "Subject"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {available.map((s) => (
+                  {rowSubjects.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
                     </SelectItem>
@@ -435,6 +466,12 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
         <Button type="button" variant="secondary" onClick={addRow}>
           + Add another subject
         </Button>
+
+        {hasDuplicates && (
+          <p className="text-sm text-destructive">
+            You&apos;ve listed the same subject more than once. Remove the duplicate rows to continue.
+          </p>
+        )}
 
         <div className="flex justify-between pt-2">
           <Button variant="outline" onClick={onBack}>
