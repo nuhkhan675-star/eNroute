@@ -11,7 +11,7 @@ const PRODUCT = [
 ];
 
 const COMPANY = [
-  { label: "Why we built eNroute", href: "/" },
+  { label: "Why we built eNroute", href: "/about" },
   { label: "Data sources & methodology", href: "/data-sources" },
   { label: "Terms & privacy", href: "/terms" },
   { label: "FAQs", href: "/faqs" },
