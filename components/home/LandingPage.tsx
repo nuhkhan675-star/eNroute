@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Starfield } from "@/components/home/Starfield";
 import { Globe } from "@/components/home/Globe";
 import { Reveal } from "@/components/home/Reveal";
-import { ArrowRight, BarChart3, FileText, Globe2, Search, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart3, FileText, Globe2, GraduationCap, Search, Sparkles } from "lucide-react";
 
 const COUNTRIES = [
   "United States",
@@ -124,7 +124,15 @@ export function LandingPage() {
 
         <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="flex flex-col items-center gap-7 text-center lg:items-start lg:text-left">
+            {/* A globe on its own could be logistics or travel. This says what
+                the product is before anyone reads a sentence. */}
             <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-primary uppercase">
+                <GraduationCap className="size-3.5" /> University admissions
+              </span>
+            </Reveal>
+
+            <Reveal delay={40}>
               <p className="text-5xl font-bold tracking-tight sm:text-6xl">
                 e<BrandN className="drop-shadow-[0_0_22px_color-mix(in_oklch,var(--primary),transparent_65%)]" />
                 route
@@ -176,6 +184,19 @@ export function LandingPage() {
                 />
               </div>
               <p className="mt-3 text-xs text-muted-foreground">Free to use. No card, no consultant.</p>
+            </Reveal>
+
+            {/* Recognisable names, one per supported country: the fastest way to
+                show both what we cover and that it isn't US-only. */}
+            <Reveal delay={320}>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-muted-foreground/80 lg:justify-start">
+                {["MIT", "Oxford", "IIT Bombay", "NUS", "HKU", "Melbourne"].map((u) => (
+                  <span key={u} className="font-medium tracking-wide">
+                    {u}
+                  </span>
+                ))}
+                <span className="text-muted-foreground/60">and 2,100 more</span>
+              </div>
             </Reveal>
           </div>
 
