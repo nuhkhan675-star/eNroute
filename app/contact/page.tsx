@@ -9,6 +9,18 @@ export const metadata: Metadata = {
 };
 
 const EMAIL = "enrouteuniadvisor@gmail.com";
+const INSTAGRAM = "https://www.instagram.com/_.enroute/";
+
+// Inline because this lucide version dropped brand glyphs.
+function InstagramMark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4 shrink-0 text-primary" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="20" rx="5.5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 const TOPICS: { icon: React.ReactNode; title: string; body: string }[] = [
   {
@@ -68,6 +80,21 @@ export default function ContactPage() {
           </a>{" "}
           if you have one set up.
         </p>
+
+        {/* DMs are often the first thing a student reaches for, so it belongs
+            beside the address rather than buried at the bottom of the page. */}
+        <a
+          href={INSTAGRAM}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40"
+        >
+          <InstagramMark />
+          <span>
+            <span className="font-medium">@_.enroute</span>
+            <span className="text-muted-foreground"> &mdash; or send a DM on Instagram</span>
+          </span>
+        </a>
       </div>
 
       <h2 className="mt-12 text-lg font-semibold">What to include</h2>
