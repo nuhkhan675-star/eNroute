@@ -42,6 +42,12 @@ const SEARCH_INSTRUCTIONS = [
   "- Report only figures you actually saw on a page you opened, and say which page each came from.",
   "- An enrolment or intake count is NOT an admit count. Enrolled students with no applicant total",
   "  is not an acceptance rate.",
+  "- The ratio wanted is OFFERS divided by APPLICATIONS -- the offer rate. This matches how US",
+  "  admission rates are reported, so the two are comparable.",
+  "- UK/UCAS wording is a trap. In UCAS data 'acceptances' means applicants who accepted a place and",
+  "  enrolled; it is an enrolment count, NOT the number offered. Using it halves a UK university's",
+  "  true rate -- Edinburgh publishes a 53% offer rate, while its acceptances over applications is",
+  "  around 22%. If a page gives applications and acceptances but no offer count, that is not enough.",
   "- If you cannot find both sides of the ratio, say so plainly. Finding nothing is an acceptable",
   "  and expected outcome; inventing a figure is not.",
 ].join("\n");
@@ -55,6 +61,10 @@ const EXTRACT_INSTRUCTIONS = [
   "record -- prefer the institution own site, an official statutory publication, or the national",
   "admissions service. If the notes do not contain both an applicant count and an admit count (or a",
   "directly published acceptance rate) from an acceptable page, set found=false.",
+  "",
+  "The admit count means OFFERS made, not places accepted or students enrolled. If the notes only",
+  "give UCAS-style 'acceptances' against applications, set found=false rather than reporting that",
+  "ratio -- it understates a UK university by roughly half and is not comparable with a US rate.",
 ].join("\n");
 
 interface Annotation { type: string; url?: string }
