@@ -48,6 +48,13 @@ const SEARCH_INSTRUCTIONS = [
   "  enrolled; it is an enrolment count, NOT the number offered. Using it halves a UK university's",
   "  true rate -- Edinburgh publishes a 53% offer rate, while its acceptances over applications is",
   "  around 22%. If a page gives applications and acceptances but no offer count, that is not enough.",
+  "- The figure must cover the WHOLE university's undergraduate intake. A single course, subject,",
+  "  school or faculty is not it. Medicine, Dentistry, Law and Veterinary pages are the usual",
+  "  offenders: they are far more competitive than the institution overall, so a medicine rate",
+  "  presented as the university's rate is badly wrong. If the only figures you find are for one",
+  "  course, report that and treat it as not found.",
+  "- Prefer the most recent cycle available. A figure older than about six years is worth reporting",
+  "  only if nothing newer exists, and say how old it is.",
   "- If you cannot find both sides of the ratio, say so plainly. Finding nothing is an acceptable",
   "  and expected outcome; inventing a figure is not.",
 ].join("\n");
@@ -65,6 +72,11 @@ const EXTRACT_INSTRUCTIONS = [
   "The admit count means OFFERS made, not places accepted or students enrolled. If the notes only",
   "give UCAS-style 'acceptances' against applications, set found=false rather than reporting that",
   "ratio -- it understates a UK university by roughly half and is not comparable with a US rate.",
+  "",
+  "The figures must be for the whole university's undergraduate intake. If the notes describe a",
+  "single course, subject, school or faculty -- Medicine and Law especially, or any source_url",
+  "containing a course or school path -- set found=false. Those courses are far more selective than",
+  "the institution, and storing one as the university's rate is a serious error.",
 ].join("\n");
 
 interface Annotation { type: string; url?: string }

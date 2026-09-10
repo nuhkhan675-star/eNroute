@@ -49,10 +49,19 @@ for (let from = 0; ; from += 1000) {
   if (!data || data.length < 1000) break;
 }
 
+// By default a university with a world ranking is left alone, on the grounds
+// that the rank proxy will place it. That assumption is now known to be bad:
+// rankings measure research, not selectivity, so Edinburgh (rank ~30, 53%
+// offer rate) and York (~75%) were both treated as far more selective than
+// they are. --include-ranked reaches those universities too, and they are
+// usually the well-known ones a student actually looks up.
+const INCLUDE_RANKED = args.includes("--include-ranked");
+
 const candidates = rows.filter((u) => {
   const hasRate = (u.university_admission_statistics ?? []).some((s) => s.acceptance_rate != null);
   const hasRank = (u.university_rankings ?? []).some((r) => r.ranking_type === "global" && r.ranking_value != null);
-  if (hasRate || hasRank) return false;
+  if (hasRate) return false;
+  if (hasRank && !INCLUDE_RANKED) return false;
   if (COUNTRY && nameOf(u.country_id) !== COUNTRY) return false;
   return true;
 });
