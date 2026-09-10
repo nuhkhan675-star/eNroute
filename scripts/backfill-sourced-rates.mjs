@@ -19,7 +19,7 @@
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import dotenv from "dotenv";
-import { findSourcedAcceptanceRateWith } from "../lib/ai/sourcedRateCore.ts";
+import { findSourcedAcceptanceRateWith, isFatalApiError } from "../lib/ai/sourcedRateCore.ts";
 dotenv.config({ path: ".env.local" });
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -95,11 +95,21 @@ for (const [i, uni] of batch.entries()) {
       if (statErr) throw statErr;
     }
   } catch (err) {
-    failed++;
     const msg = err instanceof Error ? err.message : String(err);
+
+    // An exhausted balance or rejected key will not fix itself by moving to
+    // the next university. The previous version paused 60s and carried on,
+    // so a run that lost its credits at university 18 spent hours logging
+    // "no citable figures" for a thousand universities it never looked up.
+    if (isFatalApiError(err)) {
+      console.log(label + "FATAL " + msg.slice(0, 120));
+      console.log("\nStopping: this is an account-level problem, not a data one.");
+      console.log(`Saved ${found} rates before stopping. Nothing after this point was actually checked.`);
+      break;
+    }
+
+    failed++;
     console.log(label + "ERROR " + msg.slice(0, 90));
-    // A 429 means the token budget is spent; pausing beats burning the rest
-    // of the batch on errors.
     if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
       console.log("       rate limited -- pausing 60s");
       await new Promise((r) => setTimeout(r, 60000));

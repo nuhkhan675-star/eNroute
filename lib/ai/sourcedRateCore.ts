@@ -90,6 +90,23 @@ function hostOf(url: string): string {
 }
 
 /**
+ * Errors that will not fix themselves by moving to the next university:
+ * an exhausted balance, an exceeded quota, a rejected key.
+ *
+ * Deliberately narrow. A plain 429 is usually "too many requests just now",
+ * which IS worth continuing through -- only the billing wording counts as
+ * fatal, so a burst limit doesn't abort an otherwise healthy run.
+ */
+export function isFatalApiError(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const message = String((err as { message?: string })?.message ?? err ?? "").toLowerCase();
+  if (status === 401 || status === 403) return true;
+  return /no credits remaining|insufficient_quota|insufficient quota|exceeded your current quota|billing/.test(
+    message,
+  );
+}
+
+/**
  * Per-university web lookup for a REAL, citable acceptance rate.
  *
  * Runs only for universities holding neither a published rate nor a ranking --
@@ -139,7 +156,11 @@ export async function findSourcedAcceptanceRateWith(
       }
     }
   } catch (err) {
-    // A rate limit or transient failure must never be read as "no data
+    // Out of credits or a bad key is not "this university publishes nothing".
+    // A backfill that swallowed it spent hours logging false negatives for
+    // universities it never actually looked up, so it is raised instead.
+    if (isFatalApiError(err)) throw err;
+    // A transient rate limit or network blip must never be read as "no data
     // exists" -- we fall through to the estimate path and can retry later.
     console.error("[sourced-rate] search failed for " + universityName, err instanceof Error ? err.message : err);
     return null;
@@ -164,6 +185,7 @@ export async function findSourcedAcceptanceRateWith(
     if (!extract.output_text) return null;
     parsed = JSON.parse(extract.output_text) as ParsedRate;
   } catch (err) {
+    if (isFatalApiError(err)) throw err;
     console.error("[sourced-rate] extraction failed for " + universityName, err instanceof Error ? err.message : err);
     return null;
   }
