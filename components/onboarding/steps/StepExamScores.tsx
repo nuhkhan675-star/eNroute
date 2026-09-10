@@ -26,6 +26,43 @@ const SCORE_PLACEHOLDER: Record<string, string> = {
 
 const SAT_SECTION_SCORES = Array.from({ length: 61 }, (_, i) => String(200 + i * 10));
 
+/**
+ * What a valid score actually looks like per exam.
+ *
+ * The field accepted any text at all, so "dwa" saved happily and then reached
+ * the analyst as a standardised test result. Each exam has a published scale,
+ * and a score outside it is a typo rather than an unusual candidate.
+ *
+ * OTHER is deliberately unvalidated -- it exists precisely for exams we don't
+ * model, whose results may not be numeric.
+ */
+const SCORE_RULES: Record<string, { min: number; max: number; step?: number; label: string }> = {
+  SAT: { min: 400, max: 1600, step: 10, label: "400-1600, in steps of 10" },
+  ACT: { min: 1, max: 36, step: 1, label: "1-36" },
+  IELTS: { min: 0, max: 9, step: 0.5, label: "0-9, in steps of 0.5" },
+  TOEFL_IBT: { min: 0, max: 120, step: 1, label: "0-120" },
+  DUOLINGO: { min: 10, max: 160, step: 5, label: "10-160, in steps of 5" },
+  GRE: { min: 260, max: 340, step: 1, label: "260-340" },
+  GMAT: { min: 200, max: 800, step: 10, label: "200-800, in steps of 10" },
+  PTE_ACADEMIC: { min: 10, max: 90, step: 1, label: "10-90" },
+};
+
+function validateScore(examType: string | null, raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null; // nothing typed yet isn't an error, just not addable
+  const rule = examType ? SCORE_RULES[examType] : undefined;
+  if (!rule) return null; // OTHER, or no exam picked yet
+
+  const n = Number(value);
+  if (!Number.isFinite(n)) return `Enter a number (${rule.label}).`;
+  if (n < rule.min || n > rule.max) return `${EXAM_LABELS[examType as keyof typeof EXAM_LABELS]} is scored ${rule.label}.`;
+  // Floating point: 7.5/0.5 is exact, but 0.1-style steps would not be.
+  if (rule.step && Math.abs(Math.round(n / rule.step) * rule.step - n) > 1e-9) {
+    return `${EXAM_LABELS[examType as keyof typeof EXAM_LABELS]} is scored ${rule.label}.`;
+  }
+  return null;
+}
+
 interface Props {
   countries: Country[];
   onNext: () => void;
@@ -43,10 +80,12 @@ export function StepExamScores({ countries, onNext, onBack }: Props) {
   const [examType, setExamType] = useState<(typeof examTypes)[number] | null>(null);
   const [score, setScore] = useState("");
 
-  const canAdd = examType && score.trim();
+  const scoreError = validateScore(examType, score);
+  const alreadyAdded = examScores.some((e) => e.examType === examType);
+  const canAdd = Boolean(examType) && Boolean(score.trim()) && !scoreError && !alreadyAdded;
 
   const handleAdd = () => {
-    if (!examType || !score.trim()) return;
+    if (!canAdd || !examType) return;
     addExamScore({ id: crypto.randomUUID(), examType, score: score.trim() });
     setExamType(null);
     setScore("");
@@ -145,6 +184,15 @@ export function StepExamScores({ countries, onNext, onBack }: Props) {
             <Input
               value={score}
               onChange={(e) => setScore(e.target.value)}
+              // Enter is what people press after typing a score; without this
+              // it did nothing and the score was silently lost on Continue.
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                handleAdd();
+              }}
+              inputMode={examType && SCORE_RULES[examType] ? "decimal" : "text"}
+              aria-invalid={Boolean(scoreError)}
               placeholder={examType ? SCORE_PLACEHOLDER[examType] : "Score"}
             />
           </div>
@@ -153,6 +201,13 @@ export function StepExamScores({ countries, onNext, onBack }: Props) {
             + Add
           </Button>
         </div>
+
+        {(scoreError || alreadyAdded) && (
+          <p className="-mt-3 text-sm text-destructive">
+            {scoreError ??
+              `You've already added a ${EXAM_LABELS[examType as keyof typeof EXAM_LABELS]} score. Remove it first to change it.`}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {otherScores.map((e) => (
