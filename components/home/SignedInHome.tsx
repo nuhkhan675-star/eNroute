@@ -3,6 +3,7 @@ import { BrandN } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Starfield } from "@/components/home/Starfield";
+import { FloatingCrests } from "@/components/home/FloatingCrests";
 import { Reveal } from "@/components/home/Reveal";
 import {
   AlertCircle,
@@ -51,6 +52,7 @@ export function SignedInHome({ greeting, fieldOfInterest, profileStrength, stren
     <div className="flex flex-1 flex-col overflow-x-clip">
       <section className="relative w-full px-6 pt-16 pb-10">
         <Starfield className="pointer-events-none absolute inset-0 -z-20 size-full" />
+        <FloatingCrests />
         <div
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] opacity-60"
           style={{
