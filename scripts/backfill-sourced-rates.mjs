@@ -20,6 +20,7 @@ import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { findSourcedAcceptanceRateWith, isFatalApiError } from "../lib/ai/sourcedRateCore.ts";
+import { FAMOUS } from "./famous-universities.mjs";
 dotenv.config({ path: ".env.local" });
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -66,11 +67,67 @@ const candidates = rows.filter((u) => {
   return true;
 });
 
-console.log(`${candidates.length} universities have neither a rate nor a ranking`);
-console.log(`processing ${Math.min(LIMIT, candidates.length)} this run (oldest first)\n`);
+// --famous restricts the run to the hand-ordered lists in
+// famous-universities.mjs and processes them in that order. created_at
+// ordering was only a rough proxy for prominence and happily spent lookups
+// on research institutes, duplicates and a secondary school; a fixed budget
+// is better aimed by hand.
+const FAMOUS_ONLY = args.includes("--famous");
+let batchSource = candidates;
+
+if (FAMOUS_ONLY) {
+  const wanted = COUNTRY ? { [COUNTRY]: FAMOUS[COUNTRY] ?? [] } : FAMOUS;
+  const perCountry = [];
+  const missing = [];
+  for (const [country, names] of Object.entries(wanted)) {
+    const resolved = [];
+    for (const name of names) {
+      const hit = candidates.find((u) => u.name === name && nameOf(u.country_id) === country);
+      if (hit) resolved.push(hit);
+      else missing.push(country + ": " + name);
+    }
+    perCountry.push(resolved);
+  }
+  // A typo would otherwise look identical to "already has a rate" and
+  // quietly shorten the run, so say which names matched nothing.
+  if (missing.length) {
+    console.log(missing.length + " listed name(s) matched no rate-less university (already done, or misspelt):");
+    missing.forEach((m) => console.log("  - " + m));
+    console.log("");
+  }
+
+  // Round-robin across countries rather than finishing one before starting
+  // the next. Straight concatenation would put Oxford, Cambridge and UCL
+  // behind sixty-odd less-searched schools, so a budget that ran out early
+  // -- or a run stopped by an exhausted balance -- would miss precisely the
+  // universities students look up most. Interleaving means the top of every
+  // country's list is bought first, and only the tails are at risk.
+  const ordered = [];
+  for (let i = 0; ordered.length < perCountry.reduce((n, l) => n + l.length, 0); i++) {
+    for (const list of perCountry) if (list[i]) ordered.push(list[i]);
+  }
+  batchSource = ordered;
+}
+
+// --plan prints the queue and exits. --dry-run is NOT free: it skips only the
+// database write, while still running both paid web-search calls per
+// university, so it cannot be used to preview an ordering.
+if (args.includes("--plan")) {
+  const queue = batchSource.slice(0, LIMIT);
+  console.log(`${queue.length} universities queued, in order:\n`);
+  queue.forEach((u, i) => console.log(`  ${String(i + 1).padStart(3)}. ${nameOf(u.country_id).padEnd(16)} ${u.name}`));
+  const tally = {};
+  for (const u of queue) tally[nameOf(u.country_id)] = (tally[nameOf(u.country_id)] ?? 0) + 1;
+  console.log("\nby country: " + Object.entries(tally).map(([c, n]) => `${c} ${n}`).join(", "));
+  console.log(`estimated cost at ~$0.05 each: $${(queue.length * 0.05).toFixed(2)}`);
+  process.exit(0);
+}
+
+console.log(candidates.length + " universities have no rate" + (INCLUDE_RANKED ? "" : " and no ranking"));
+console.log("processing " + Math.min(LIMIT, batchSource.length) + " this run (" + (FAMOUS_ONLY ? "most famous first" : "oldest first") + ")\n");
 
 let found = 0, declined = 0, failed = 0;
-const batch = candidates.slice(0, LIMIT);
+const batch = batchSource.slice(0, LIMIT);
 
 for (const [i, uni] of batch.entries()) {
   const country = nameOf(uni.country_id);
