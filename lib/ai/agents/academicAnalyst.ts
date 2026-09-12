@@ -39,15 +39,25 @@ sentence, ideally under ~20 words) -- never a multi-sentence paragraph crammed i
 Keep "summary" itself to 1-2 short sentences.`;
 
 export async function runAcademicAnalyst(profile: FullStudentProfile): Promise<AcademicAnalysis> {
-  const gradeBlock = (label: string, subjects: { subjectName: string; grade: string }[]) =>
+  const gradeBlock = (label: string, qualification: string, subjects: { subjectName: string; grade: string }[]) =>
     subjects.length > 0
-      ? `${label} (${profile.grade10Board || "board not specified"}):\n${subjects.map((s) => `- ${s.subjectName}: ${s.grade}`).join("\n")}`
+      ? `${label} (${qualification}):\n${subjects.map((s) => `- ${s.subjectName}: ${s.grade}`).join("\n")}`
       : "";
 
+  // Grades 9-10 sit under the secondary board; grade 11 is the first year of
+  // the senior curriculum. Labelling it with the board sent an A Level
+  // student's AS results to the analyst as "Grade 11 (IGCSE)", which reads
+  // an A as a middling IGCSE grade rather than the AS ceiling.
+  const board = profile.grade10Board || "board not specified";
+  const senior =
+    profile.curriculum?.code === "A_LEVELS"
+      ? "AS Levels -- the Year 12 half of the A Level, where A is the top grade"
+      : profile.curriculum?.name ?? board;
+
   const secondaryBlocks = [
-    gradeBlock("Grade 9", profile.grade9Subjects),
-    gradeBlock("Grade 10 / secondary school", profile.grade10Subjects),
-    gradeBlock("Grade 11", profile.grade11Subjects),
+    gradeBlock("Grade 9", board, profile.grade9Subjects),
+    gradeBlock("Grade 10 / secondary school", board, profile.grade10Subjects),
+    gradeBlock("Grade 11", senior, profile.grade11Subjects),
   ]
     .filter(Boolean)
     .join("\n\n");

@@ -9,6 +9,11 @@ export function getGradeOptionsForScale(scale: string): string[] {
       return ["5", "4", "3", "2", "1"];
     case "A*-E":
       return ["A*", "A", "B", "C", "D", "E", "U"];
+    // AS Level: the Year 12 half of an A Level. Top grade is A -- A* is only
+    // awarded at the full A Level, so offering it here let students claim a
+    // grade that does not exist.
+    case "AS":
+      return ["A", "B", "C", "D", "E", "U"];
     case "A*-G":
       return ["A*", "A", "B", "C", "D", "E", "F", "G", "U"];
     case "A-E":

@@ -42,7 +42,8 @@ const MAX_SUBJECTS_PER_YEAR = 12;
  */
 const CURRICULUM_GRADE_SCALE: Record<string, string> = {
   IB: "1-7",
-  A_LEVELS: "A*-E",
+  // Grade 11 of an A Level programme is AS Level, where A is the ceiling.
+  A_LEVELS: "AS",
   AP: "1-5",
   US_HS_DIPLOMA: "A-F",
   AU_CURRICULUM: "A-E",
@@ -73,7 +74,7 @@ const GRADE_WEIGHT_NOTES: Record<number, Partial<Record<string, string>>> = {
   },
   11: {
     US: "11th grade is usually the single most-weighted year in a US application.",
-    GB: "UK admissions mainly evaluate your final 2 years via predicted grades -- Grade 11 (Year 12) results matter directly.",
+    GB: "Your Year 12 (AS) results are what your school's predicted A Level grades are built on -- UK universities decide on those predictions, and many see the AS grades too.",
     HK: "Grade 11 is part of the senior-secondary results Hong Kong universities weigh most.",
     SG: "Grade 11 (Year 12) results are core to Singapore's final-2-years evaluation.",
   },
@@ -203,7 +204,11 @@ export function StepSecondaryGrades({ countries, curricula, onNext, onBack }: Pr
   const seniorCurriculum = curricula.find((c) => c.id === curriculumId);
   const secondaryScale = grade10Board ? BOARD_GRADE_SCALE[grade10Board] : "0-100";
   const seniorScale = (seniorCurriculum && CURRICULUM_GRADE_SCALE[seniorCurriculum.code]) ?? secondaryScale;
-  const grade11Label = seniorCurriculum ? `Grade 11 (${seniorCurriculum.name})` : "Grade 11";
+  const grade11Label = !seniorCurriculum
+    ? "Grade 11"
+    : seniorCurriculum.code === "A_LEVELS"
+      ? "Grade 11 (AS Levels)"
+      : `Grade 11 (${seniorCurriculum.name})`;
   const setGrade10Board = useOnboardingStore((s) => s.setGrade10Board);
   const setGrade9Subjects = useOnboardingStore((s) => s.setGrade9Subjects);
   const setGrade10Subjects = useOnboardingStore((s) => s.setGrade10Subjects);
