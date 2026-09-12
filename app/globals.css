@@ -175,10 +175,16 @@
   }
   /* Each body child is its own stacking context, so a dropdown inside main
      could never paint over the footer however high its own z-index -- the
-     university search list was cut off by the footer on short pages. main
-     sits above its siblings; the sticky header keeps its own higher index. */
-  body > main {
-    z-index: 2;
+     university search list was cut off by the footer on short pages.
+
+     The footer drops BELOW main rather than main rising above its siblings.
+     Raising main to 2 broke every Select in the app: Base UI portals its
+     popovers into containers appended to body, which this same rule pins at
+     z-index 1, so main painted over all of them. At 0 the footer still sits
+     above the fixed glow (same index, later in the tree) and under main, and
+     the portals -- last in the tree at 1 -- still win over everything. */
+  body > footer {
+    z-index: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
