@@ -146,11 +146,11 @@ export function LandingPage() {
                   rates. The headline says what it does; the line under it
                   says how. */}
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Your chances of getting in, built on real admissions data.
+                Your real chances of getting in.
               </h1>
               <p className="mt-3 max-w-xl text-muted-foreground">
-                Estimates for universities across six countries, read from your curriculum on its own
-                terms — with the reasoning behind every number.
+                Built on real admissions data across six countries, read from your curriculum on its
+                own terms — with the reasoning behind every number.
               </p>
             </Reveal>
 
@@ -209,11 +209,20 @@ export function LandingPage() {
 
           {/* Its own column rather than a background layer: it's draggable now,
               so it needs to not sit under the headline and swallow clicks. */}
-          <div className="relative flex justify-center lg:justify-end">
-            <Globe className="aspect-square w-[min(88vw,34rem)]" />
-            <span className="pointer-events-none absolute bottom-0 text-[11px] text-muted-foreground/70">
-              Drag to spin
-            </span>
+          <div className="flex justify-center lg:justify-end">
+            {/* The wrapper is sized to the globe so the caption row spans
+                exactly its width: the scale on the left, the hint on the
+                right, both hugging the sphere's bottom edge. */}
+            <div className="relative w-[min(88vw,34rem)]">
+              <Globe className="aspect-square w-full" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 text-[11px]">
+                <span className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">2,100+ universities</span> across these six
+                  countries
+                </span>
+                <span className="shrink-0 text-muted-foreground/70">Drag to spin</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
