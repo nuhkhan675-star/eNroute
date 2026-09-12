@@ -140,10 +140,17 @@ export function LandingPage() {
             </Reveal>
 
             <Reveal delay={80}>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Know where you actually fit.</h1>
+              {/* "Chances of getting in", not "your acceptance rate": an
+                  acceptance rate belongs to a university, and the product's
+                  number is the student's estimated chance, built from those
+                  rates. The headline says what it does; the line under it
+                  says how. */}
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Your chances of getting in, built on real admissions data.
+              </h1>
               <p className="mt-3 max-w-xl text-muted-foreground">
-                Admission chance estimates across six countries, read from your curriculum on its own
-                terms — and shown with the reasoning behind every number.
+                Estimates for universities across six countries, read from your curriculum on its own
+                terms — with the reasoning behind every number.
               </p>
             </Reveal>
 
