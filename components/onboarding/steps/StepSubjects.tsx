@@ -5,7 +5,7 @@ import { useOnboardingStore } from "@/lib/store/onboarding-store";
 import type { Subject, Curriculum } from "@/lib/db/reference";
 import type { SubjectEntry } from "@/lib/validation/onboarding";
 import { getGradeOptionsForScale } from "@/lib/utils/grades";
-import { getExpectedSubjectCount } from "@/lib/utils/subjectCounts";
+import { getExpectedSubjectCount, getMaxSubjectCount } from "@/lib/utils/subjectCounts";
 import {
   Select,
   SelectContent,
@@ -75,10 +75,8 @@ const IB_GROUPS = [
 const IB_CORE_KEYS = ["Extended Essay", "Theory of Knowledge"];
 const IB_SUBJECT_COUNT = 6;
 
-// Ceiling for the non-IB curricula, which have no single fixed count -- three
-// or four A Levels, a handful of APs, a fuller CBSE slate. Generous enough not
-// to block a real record, tight enough that nobody submits forty rows.
-const MAX_SUBJECTS = 12;
+// The non-IB ceiling is per curriculum (see subjectCounts.ts): a single
+// shared twelve let an A Level student add twelve subjects.
 
 interface Props {
   curricula: Curriculum[];
@@ -96,6 +94,7 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
   const curriculum = curricula.find((c) => c.id === curriculumId);
   const isIB = curriculum?.code === "IB";
   const expectedCount = getExpectedSubjectCount(curriculum?.code);
+  const maxSubjects = getMaxSubjectCount(curriculum?.code);
 
   const [available, setAvailable] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,7 +384,7 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
   }
 
   const hasDuplicates = hasDuplicateSubjects(rows);
-  const tooMany = rows.length > MAX_SUBJECTS;
+  const tooMany = rows.length > maxSubjects;
   const canContinue = rows.length > 0 && rows.every(rowIsComplete) && !hasDuplicates && !tooMany;
 
   const handleNext = () => {
@@ -491,8 +490,10 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
           );
         })}
 
-        <Button type="button" variant="secondary" onClick={addRow} disabled={rows.length >= MAX_SUBJECTS}>
-          {rows.length >= MAX_SUBJECTS ? `Maximum ${MAX_SUBJECTS} subjects` : "+ Add another subject"}
+        <Button type="button" variant="secondary" onClick={addRow} disabled={rows.length >= maxSubjects}>
+          {rows.length >= maxSubjects
+            ? `${maxSubjects} is the most ${curriculum?.name ?? "this curriculum"} allows`
+            : "+ Add another subject"}
         </Button>
 
         {hasDuplicates && (
@@ -503,7 +504,8 @@ export function StepSubjects({ curricula, onNext, onBack }: Props) {
 
         {tooMany && (
           <p className="text-sm text-destructive">
-            Remove {rows.length - MAX_SUBJECTS} to continue &mdash; {MAX_SUBJECTS} subjects is the maximum.
+            Remove {rows.length - maxSubjects} to continue &mdash; {maxSubjects} subjects is the most{" "}
+            {curriculum?.name ?? "this curriculum"} allows.
           </p>
         )}
 

@@ -19,3 +19,27 @@ export function getExpectedSubjectCount(curriculumCode: string | undefined): num
   if (!curriculumCode) return 4;
   return SUBJECT_COUNT_BY_CURRICULUM_CODE[curriculumCode] ?? 4;
 }
+
+// The most subjects a real record can hold, per curriculum. One shared cap
+// of twelve let an A Level student list twelve subjects, which no sixth form
+// offers -- five is already Further Maths plus an EPQ on top of a full load.
+// Each ceiling is the board's realistic maximum with a little slack, not its
+// typical count; that is what the table above is for. IB is fixed at six and
+// enforced separately on its own branch of the form.
+const MAX_SUBJECT_COUNT_BY_CURRICULUM_CODE: Record<string, number> = {
+  A_LEVELS: 5,
+  CBSE: 7, // five compulsory, an optional sixth, occasionally a skill subject
+  ICSE: 8, // seven is the standard Class 10 slate
+  ISC: 7, // English plus up to five or six electives
+  AU_CURRICULUM: 7, // five or six ATAR subjects
+  AP: 12, // taken across several years, so genuinely open-ended
+  US_HS_DIPLOMA: 12,
+  OTHER: 12,
+};
+
+export const DEFAULT_MAX_SUBJECT_COUNT = 12;
+
+export function getMaxSubjectCount(curriculumCode: string | undefined): number {
+  if (!curriculumCode) return DEFAULT_MAX_SUBJECT_COUNT;
+  return MAX_SUBJECT_COUNT_BY_CURRICULUM_CODE[curriculumCode] ?? DEFAULT_MAX_SUBJECT_COUNT;
+}
