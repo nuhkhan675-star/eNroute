@@ -3,20 +3,7 @@
 import { useState } from "react";
 import { COUNTRY_GUIDES, type CountryGuide } from "@/lib/content/applicationInfo";
 import { ExternalLink, Quote } from "lucide-react";
-
-/**
- * Two-letter marks for the country rail. Deliberately not flag emoji: they
- * render as inconsistent glyphs across Windows and macOS, and a text mark
- * stays legible at the size the rail uses.
- */
-const COUNTRY_MARK: Record<string, string> = {
-  "united-states": "US",
-  "united-kingdom": "UK",
-  india: "IN",
-  australia: "AU",
-  singapore: "SG",
-  "hong-kong": "HK",
-};
+import { CountryFlag } from "@/components/application-info/CountryFlag";
 
 /**
  * The guide is read as one document with numbered parts, not a stack of
@@ -110,16 +97,15 @@ export default function ApplicationInfoPage() {
                         : "text-muted-foreground hover:bg-card hover:text-foreground")
                     }
                   >
-                    <span
+                    {/* Flags dim slightly when inactive so the active row
+                        still reads as the highlighted one. */}
+                    <CountryFlag
+                      slug={g.slug}
                       className={
-                        "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold tracking-wide transition-colors " +
-                        (isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-card text-muted-foreground ring-1 ring-border group-hover:text-foreground")
+                        "h-[18px] w-[27px] shrink-0 rounded-[3px] ring-1 ring-white/15 transition-opacity " +
+                        (isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100")
                       }
-                    >
-                      {COUNTRY_MARK[g.slug]}
-                    </span>
+                    />
                     <span className="whitespace-nowrap">{g.name}</span>
                   </button>
                 </li>
