@@ -173,6 +173,13 @@
     position: relative;
     z-index: 1;
   }
+  /* Each body child is its own stacking context, so a dropdown inside main
+     could never paint over the footer however high its own z-index -- the
+     university search list was cut off by the footer on short pages. main
+     sits above its siblings; the sticky header keeps its own higher index. */
+  body > main {
+    z-index: 2;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     body::before {

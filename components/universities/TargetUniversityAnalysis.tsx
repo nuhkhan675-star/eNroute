@@ -76,7 +76,10 @@ export function TargetUniversityAnalysis() {
   const line = result ? selectivityLine(result) : null;
 
   return (
-    <Card className="mt-6">
+    // Card ships with overflow-hidden for image corners. The search dropdown
+    // is absolutely positioned inside it, so that clipped the list to a single
+    // row at the card's bottom edge. Nothing here needs the clipping.
+    <Card className="mt-6 overflow-visible">
       <CardContent className="flex flex-col gap-3 py-5">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
