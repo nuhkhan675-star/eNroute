@@ -168,8 +168,17 @@
     );
   }
 
-  /* Page content sits above the glow layer. */
-  body > * {
+  /* Page content sits above the glow layer.
+
+     Scoped to the layout's own regions, NOT body > *. Base UI appends a
+     plain div to body for every portalled popover; position: relative on
+     that div made it the containing block for the popup's absolute
+     positioner, so for the first frame the popup sat at the bottom of the
+     document. Opening it moved focus into it there, and the browser scrolled
+     the whole page to follow -- the "clicking my profile scrolls the site"
+     bug. Portal containers must stay static for the positioner to resolve
+     against the document. */
+  body > :is(header, main, footer) {
     position: relative;
     z-index: 1;
   }
