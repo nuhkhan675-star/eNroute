@@ -40,7 +40,7 @@ const STEPS = [
 // a made-up "prediction accuracy" would be the exact thing this product is
 // supposed to be an antidote to.
 const STATS = [
-  { value: "2,700+", label: "Universities" },
+  { value: "3,100+", label: "Universities" },
   { value: "6", label: "Countries" },
   { value: "8", label: "Curricula understood" },
   { value: "70", label: "Fields of study" },
@@ -202,7 +202,7 @@ export function LandingPage() {
                     {u}
                   </span>
                 ))}
-                <span className="text-muted-foreground/60">and 2,700 more</span>
+                <span className="text-muted-foreground/60">and 3,100 more</span>
               </div>
             </Reveal>
           </div>
@@ -217,7 +217,7 @@ export function LandingPage() {
               <Globe className="aspect-square w-full" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 text-[11px]">
                 <span className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">2,700+ universities</span> across these six
+                  <span className="font-semibold text-foreground">3,100+ universities</span> across these six
                   countries
                 </span>
                 <span className="shrink-0 text-muted-foreground/70">Drag to spin</span>

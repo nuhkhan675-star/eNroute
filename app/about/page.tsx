@@ -80,7 +80,7 @@ export default function AboutPage() {
       <Section icon={<Globe2 className="size-4 text-amber-400" />} title="Where it's going">
         <p>
           Six countries today &mdash; the United States, United Kingdom, India, Australia, Singapore
-          and Hong Kong &mdash; and over 2,700 universities. It is still growing, and it is still one
+          and Hong Kong &mdash; and over 3,100 universities. It is still growing, and it is still one
           person building it.
         </p>
         <p className="mt-3">

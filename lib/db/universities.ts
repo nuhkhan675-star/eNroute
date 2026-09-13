@@ -117,9 +117,12 @@ export async function getCountriesWithUniversityCounts(): Promise<CountryWithCou
   return countries.map((c, i) => ({ ...c, universityCount: counts[i].count ?? 0 }));
 }
 
-// All universities in one country, for the per-country browse view. Capped
-// well above our largest per-country dataset (~130) so it never silently
-// truncates. `categoryId` is deterministic SQL filtering (never AI) for the
+// Universities in one country WITH a campus photo, for the per-country browse
+// view. Browsing is not searching: nobody asked for a specific school, so the
+// same rule as recommendations applies and photo-less rows stay out -- they
+// remain reachable by name through the typeahead. The cap sits above the
+// largest photo pool (the US, ~370) so it never silently truncates.
+// `categoryId` is deterministic SQL filtering (never AI) for the
 // "Country -> Degree" search the platform spec calls for -- only returns
 // universities that actually have a university_programs row in that category.
 export async function getUniversitiesByCountry(
@@ -135,8 +138,9 @@ export async function getUniversitiesByCountry(
         : "id, name, city, website, photo_url, countries(name)"
     )
     .eq("country_id", countryId)
+    .not("photo_url", "is", null)
     .order("name")
-    .limit(300);
+    .limit(800);
   if (categoryId) {
     query = query.eq("university_programs.programs.category_id", categoryId);
   }
@@ -235,7 +239,7 @@ export interface RelevantUniversity {
   acceptanceRate: number | null;
   /** Best global rank, so schools with no published rate can still be placed on the reach/likely spectrum. */
   globalRank: number | null;
-  /** Whether a campus photo is on record. Cosmetic only -- a tie-breaker between otherwise equal candidates, never a filter. */
+  /** Whether a campus photo is on record. Recommendations require one; search and analysis do not. */
   hasPhoto: boolean;
 }
 
@@ -399,24 +403,17 @@ export function buildShortlist(relevant: RelevantUniversity[], limit = SHORTLIST
     return out.slice(0, n);
   };
 
-  // Universities we hold a real campus photo for are picked first -- a grid of
-  // grey placeholders reads as a broken product. It is a preference, not a
-  // filter: photo coverage is 19%, and a student targeting only Australia has
-  // six such universities in total, so a hard filter would hand them six
-  // recommendations instead of twenty. Whatever the photo pool can't fill is
-  // topped up from the rest, still stratified across tiers.
+  // Only universities with a real campus photo are recommended -- a grid of
+  // grey placeholders reads as a broken product. This is a hard filter by
+  // decision (2026-09-13), not a preference: it used to top the grid up from
+  // photo-less rows, and that put unvetted-looking cards in front of students.
+  // The cost is accepted knowingly: a student targeting only Australia gets
+  // six recommendations, not twenty, until more Australian photos exist.
+  // Everything else stays reachable by name through search and analysis.
   const picked = gather(
     classified.filter((c) => c.row.hasPhoto),
     limit,
   );
-  if (picked.length < limit) {
-    picked.push(
-      ...gather(
-        classified.filter((c) => !c.row.hasPhoto),
-        limit - picked.length,
-      ),
-    );
-  }
 
   // Emit in tier order: Likely -> ... -> hardest reach.
   const byTier = new Map<SelectivityTier, typeof classified>();
