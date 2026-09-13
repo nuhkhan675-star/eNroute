@@ -21,14 +21,26 @@ const K = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const H = { apikey: K, Authorization: "Bearer " + K, "Content-Type": "application/json" };
 const APPLY = process.argv.includes("--apply");
 const LIMIT = Number((process.argv.find((a) => a.startsWith("--limit=")) || "").split("=")[1] || 0);
+// --since=YYYY-MM-DD vets only photos stored on or after that date, so a
+// fresh scrape can be checked without re-spending on the hundreds already
+// vetted.
+const SINCE = (process.argv.find((a) => a.startsWith("--since=")) || "").split("=")[1] || null;
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-3.6-flash";
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
+// The free tier allows 20 requests per model per day, and each model has its
+// own allowance. Rotating through siblings when one is spent turns 120
+// photos a day into several hundred, still without touching a paid key.
+const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+let geminiModelIdx = 0;
+// --no-openai removes the fallback entirely: if Gemini's quota runs out the
+// run stops instead of quietly switching to a paid provider.
+const OPENAI_KEY = process.argv.includes("--no-openai") ? null : process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5.6-luna";
 
-const BATCH = 6;
-const CONCURRENCY = 3;
+// More images per call stretches the daily request quota. Verdicts are one
+// short line per image, so a larger batch costs little accuracy.
+const BATCH = Number((process.argv.find((a) => a.startsWith("--batch=")) || "").split("=")[1] || 6);
+const CONCURRENCY = process.argv.includes("--no-openai") ? 1 : 3;
 
 const PROMPT = `You are checking photos used on university cards in a student admissions app.
 
@@ -90,7 +102,7 @@ async function classifyGemini(images) {
     parts.push({ inline_data: { mime_type: img.mime, data: img.b64 } });
   });
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODELS[geminiModelIdx]}:generateContent?key=${GEMINI_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,7 +110,7 @@ async function classifyGemini(images) {
       signal: AbortSignal.timeout(120_000),
     },
   );
-  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 160));
+  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 1500));
   const j = await r.json();
   const text = (j.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("\n");
   return parseVerdicts(text, images.length);
@@ -121,18 +133,43 @@ async function classifyOpenAI(images) {
   return parseVerdicts(j.choices?.[0]?.message?.content ?? "", images.length);
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 let geminiDead = false;
 async function classify(images) {
   if (GEMINI_KEY && !geminiDead) {
-    try {
-      return await classifyGemini(images);
-    } catch (err) {
-      console.log("   gemini failed (" + String(err.message).slice(0, 90) + ")");
-      // A 429 or a dead model won't fix itself mid-run; stop trying it and
-      // spend the rest of the run on OpenAI rather than doubling every call.
-      if (/429|quota|404|not found|RESOURCE_EXHAUSTED/i.test(String(err.message))) {
-        console.log("   -> switching to OpenAI for the rest of the run");
-        geminiDead = true;
+    // A 429 from Gemini's free tier is a per-minute limit, not a dead key:
+    // a probe a minute later succeeds. The old code treated the first one as
+    // fatal and, with no OpenAI fallback, stopped after 64 of 1,513 photos.
+    // Back off and retry; only give up after repeated failures.
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      try {
+        return await classifyGemini(images);
+      } catch (err) {
+        const msg = String(err.message);
+        // 503 is the model being overloaded for a moment; it is retried the
+        // same way as a per-minute limit rather than abandoning the batch.
+        const rateLimited = /429|quota|RESOURCE_EXHAUSTED|503|overloaded|UNAVAILABLE/i.test(msg);
+        console.log("   gemini failed (" + msg.slice(0, 90).replace(/s+/g, " ") + ")");
+        // A spent daily allowance will not come back by waiting; move to the
+        // next model and retry at once.
+        if (rateLimited && /PerDay/i.test(msg) && geminiModelIdx < GEMINI_MODELS.length - 1) {
+          geminiModelIdx++;
+          console.log("   -> daily quota spent, switching to " + GEMINI_MODELS[geminiModelIdx]);
+          attempt--;
+          continue;
+        }
+        if (rateLimited && attempt < 6) {
+          const wait = 20_000 * attempt;
+          console.log("   -> rate limited, waiting " + wait / 1000 + "s (attempt " + attempt + "/6)");
+          await sleep(wait);
+          continue;
+        }
+        if (/404|not found/i.test(msg) || rateLimited) {
+          console.log("   -> giving up on Gemini for the rest of the run");
+          geminiDead = true;
+        }
+        break;
       }
     }
   }
@@ -151,7 +188,9 @@ async function getAll(path) {
   return out;
 }
 
-let unis = (await getAll("universities?select=id,name,photo_url&order=name")).filter((u) => u.photo_url);
+let unis = (await getAll("universities?select=id,name,photo_url,photo_last_verified_at&order=name")).filter(
+  (u) => u.photo_url && (!SINCE || (u.photo_last_verified_at ?? "") >= SINCE),
+);
 if (LIMIT) unis = unis.slice(0, LIMIT);
 console.log(`vetting ${unis.length} photos, ${BATCH} per call\n`);
 
