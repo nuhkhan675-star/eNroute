@@ -21,7 +21,7 @@ const COUNTRIES = "US · UK · India · Australia · Singapore · Hong Kong";
 // Rounded rather than exact: the catalogue grows, and a precise figure on a
 // marketing surface goes stale the moment it does.
 const PILLS = [
-  { text: "2,000+ universities", tone: "border-primary/40 bg-primary/10 text-primary" },
+  { text: "2,700+ universities", tone: "border-primary/40 bg-primary/10 text-primary" },
   { text: "Odds from published data", tone: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   { text: "Estimates labelled as estimates", tone: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
 ];

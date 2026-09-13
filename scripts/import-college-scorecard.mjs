@@ -47,6 +47,16 @@ const FIELDS = [
 
 const SOURCE_NAME = "U.S. Dept of Education College Scorecard (IPEDS)";
 
+// Below ~2,000 students the "predominantly bachelor's" filter starts letting
+// in rabbinical and theological seminaries -- real institutions with real
+// Scorecard rates, but not somewhere an international applicant is looking.
+// Names carrying "University" are kept (Yeshiva University, The Master's
+// University and Seminary) since those are the ones a student does search.
+function isSeminary(name) {
+  if (/\buniversity\b/i.test(name)) return false;
+  return /\b(rabbinical|talmudical|mesivta|yeshiva|yeshivath|bible college|theological|seminary|kollel)\b/i.test(name);
+}
+
 async function fetchPage(page, perPage) {
   const url =
     `https://api.data.gov/ed/collegescorecard/v1/schools?api_key=${SCORECARD_KEY}` +
@@ -120,6 +130,7 @@ async function main() {
   let fetched = 0;
   let written = 0;
   let skippedNoRate = 0;
+  let skippedSeminary = 0;
   const today = new Date().toISOString().slice(0, 10);
   const year = new Date().getFullYear();
 
@@ -148,6 +159,11 @@ async function main() {
       if (acceptanceRate == null) {
         skippedNoRate++;
         continue; // don't write a university row with no real statistic to attach -- nothing to gain over what's already there
+      }
+
+      if (isSeminary(name)) {
+        skippedSeminary++;
+        continue;
       }
 
       if (DRY_RUN) {
@@ -234,7 +250,7 @@ async function main() {
 
   console.log(
     `\nDone. Fetched ${fetched} | updated existing: ${updatedExisting} | inserted new: ${insertedNew} | ` +
-      `total written: ${written} | skipped (no published rate): ${skippedNoRate}`
+      `total written: ${written} | skipped (no published rate): ${skippedNoRate} | skipped (seminary): ${skippedSeminary}`
   );
 }
 
