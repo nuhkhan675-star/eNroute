@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bookmark, Compass, LayoutDashboard } from "lucide-react";
+import { ClipboardList, Gauge, GraduationCap, Star } from "lucide-react";
 
 const ITEMS = [
-  { href: "/universities", label: "Universities", icon: Compass },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/saved", label: "Saved Schools", icon: Bookmark },
-  { href: "/application-info", label: "Application Info", icon: BookOpen },
+  { href: "/universities", label: "Universities", icon: GraduationCap },
+  { href: "/dashboard", label: "Dashboard", icon: Gauge },
+  { href: "/saved", label: "Saved Schools", icon: Star },
+  { href: "/application-info", label: "Application Info", icon: ClipboardList },
 ];
 
 /**
