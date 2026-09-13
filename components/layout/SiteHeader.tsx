@@ -3,36 +3,29 @@ import { getCurrentUser } from "@/lib/supabase/currentUser";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/Logo";
 import { AccountMenu } from "@/components/layout/AccountMenu";
+import { PrimaryNav } from "@/components/layout/PrimaryNav";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="transition-opacity hover:opacity-80">
+      {/* Three columns with the outer two sharing the slack, so the nav sits
+          on the true centre line of the page rather than wherever the logo
+          and account menu happen to leave it. */}
+      <div className="mx-auto grid h-16 w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-6">
+        <Link href="/" className="justify-self-start transition-opacity hover:opacity-80">
           <Logo className="h-10" />
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+
+        {user ? <PrimaryNav /> : <span />}
+
+        <div className="flex items-center justify-self-end">
           {user ? (
-            <>
-              <Link href="/universities" className="text-muted-foreground transition-colors hover:text-foreground">
-                Universities
-              </Link>
-              <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">
-                Dashboard
-              </Link>
-              <Link href="/saved" className="text-muted-foreground transition-colors hover:text-foreground">
-                Saved Schools
-              </Link>
-              <Link href="/application-info" className="text-muted-foreground transition-colors hover:text-foreground">
-                Application Info
-              </Link>
-              <AccountMenu
-                name={String(user.user_metadata?.full_name ?? "")}
-                email={user.email ?? ""}
-              />
-            </>
+            <AccountMenu
+              name={String(user.user_metadata?.full_name ?? "")}
+              email={user.email ?? ""}
+            />
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login">Log in</Link>} />
@@ -44,7 +37,7 @@ export async function SiteHeader() {
               />
             </div>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );
