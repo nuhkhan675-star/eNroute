@@ -83,10 +83,19 @@ export function UniversityMatchCard({ card, initialSaved }: { card: DashboardMat
                 {CONFIDENCE_LABELS[card.confidence]}
               </span>
             </div>
-            {BASIS_NOTICES[card.selectivityBasis] && (
-              <p className={`text-xs ${BASIS_NOTICES[card.selectivityBasis]!.style}`}>
-                {BASIS_NOTICES[card.selectivityBasis]!.text}
+            {/* A stored rate can itself be an estimate: NUS and NTU publish
+                nothing, and the figure on record is a third party's guess.
+                That gets the same honest badge as our own estimates. */}
+            {card.selectivityRateUnofficial ? (
+              <p className="text-xs text-muted-foreground">
+                Unofficial acceptance rate{card.selectivityRateSource ? ` (${card.selectivityRateSource} estimate)` : ""}
               </p>
+            ) : (
+              BASIS_NOTICES[card.selectivityBasis] && (
+                <p className={`text-xs ${BASIS_NOTICES[card.selectivityBasis]!.style}`}>
+                  {BASIS_NOTICES[card.selectivityBasis]!.text}
+                </p>
+              )
             )}
             <p className="text-xs text-muted-foreground">
               Estimated by our admissions model. Not an official prediction or guarantee from the

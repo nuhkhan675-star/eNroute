@@ -430,7 +430,14 @@ export interface UniversityForAnalysis {
   photoUrl: string | null;
   specialities: string[];
   programs: { displayName: string; categoryName: string }[];
-  admissionStatistics: { year: number; acceptanceRate: number | null; level: "university" } | null;
+  admissionStatistics: {
+    year: number;
+    acceptanceRate: number | null;
+    level: "university";
+    /** "low" marks a third-party estimate stored for a university that publishes nothing -- the UI must say so. */
+    confidence: "high" | "moderate" | "low";
+    sourceName: string | null;
+  } | null;
   /** Published score bands for admitted students -- what the student's own stats get compared against. */
   requirements: {
     requirementType: string;
@@ -471,7 +478,7 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
         .in("university_id", universityIds),
       supabase
         .from("university_admission_statistics")
-        .select("university_id, year, acceptance_rate")
+        .select("university_id, year, acceptance_rate, confidence, data_sources(name)")
         .in("university_id", universityIds)
         .order("year", { ascending: false }),
       supabase
@@ -523,7 +530,13 @@ export async function getUniversitiesForAnalysis(universityIds: string[]): Promi
   for (const s of (stats ?? []) as any[]) {
     const entry = map.get(s.university_id);
     if (entry && !entry.admissionStatistics) {
-      entry.admissionStatistics = { year: s.year, acceptanceRate: s.acceptance_rate, level: "university" };
+      entry.admissionStatistics = {
+        year: s.year,
+        acceptanceRate: s.acceptance_rate,
+        level: "university",
+        confidence: s.confidence ?? "moderate",
+        sourceName: s.data_sources?.name ?? null,
+      };
     }
   }
   for (const r of (rankings ?? []) as any[]) {

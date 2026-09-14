@@ -88,6 +88,13 @@ export interface UniversityAnalysisRecord {
   selectivityBasis: SelectivityBasis;
   /** The acceptance rate actually used (real or estimated), 0-100, if any. */
   selectivityRate: number | null;
+  /**
+   * True when the stored rate is a third-party estimate (confidence "low") for
+   * a university that publishes no figure -- NUS and NTU. The engine treats it
+   * as a rate; the UI must not present it as a published one.
+   */
+  selectivityRateUnofficial?: boolean;
+  selectivityRateSource?: string | null;
   academicScore: number;
   programFitScore: number;
   extracurricularScore: number;
@@ -138,6 +145,15 @@ export async function saveUniversityAnalysis(record: UniversityAnalysisRecord): 
   if (error) throw error;
 }
 
+// The university's stored rate, only when it is a low-confidence third-party
+// figure and the analysis actually leaned on a rate.
+function unofficialStat(row: any): any | null {
+  if (row.selectivity_basis !== "acceptance_rate") return null;
+  const stats = row.universities?.university_admission_statistics ?? [];
+  const used = stats.find((s: any) => s.acceptance_rate != null);
+  return used && used.confidence === "low" ? used : null;
+}
+
 function rowToRecord(row: any): UniversityAnalysisRecord {
   const u = row.universities;
   return {
@@ -153,6 +169,8 @@ function rowToRecord(row: any): UniversityAnalysisRecord {
     selectivityLevel: row.selectivity_level,
     selectivityBasis: row.selectivity_basis ?? "unknown",
     selectivityRate: row.selectivity_rate,
+    selectivityRateUnofficial: unofficialStat(row) != null,
+    selectivityRateSource: unofficialStat(row)?.data_sources?.name ?? null,
     academicScore: row.academic_score,
     programFitScore: row.program_fit_score,
     extracurricularScore: row.extracurricular_score,
@@ -171,7 +189,8 @@ function rowToRecord(row: any): UniversityAnalysisRecord {
   };
 }
 
-const UNIVERSITY_ANALYSIS_SELECT = "*, universities(id, name, city, photo_url, countries(name))";
+const UNIVERSITY_ANALYSIS_SELECT =
+  "*, universities(id, name, city, photo_url, countries(name), university_admission_statistics(acceptance_rate, confidence, data_sources(name)))";
 
 export async function getUniversityAnalysis(
   profileId: string,

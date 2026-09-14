@@ -36,6 +36,9 @@ export interface FactualRateForCompare {
   year: number;
   acceptanceRate: number | null;
   level: "university" | "faculty" | "program";
+  /** "low" means a third-party estimate for a university that publishes nothing; labelled as such. */
+  confidence?: "high" | "moderate" | "low";
+  sourceName?: string | null;
 }
 
 interface Props {
@@ -90,9 +93,16 @@ export function ProgramAnalysis({ analysis, factualRate }: Props) {
           <div className="rounded-lg border border-border bg-muted/60 p-3">
             {hasFactualRate ? (
               <>
-                <p className="text-xs text-muted-foreground">
-                  University historical acceptance rate ({LEVEL_LABEL[factualRate!.level]}, {factualRate!.year})
-                </p>
+                {factualRate!.confidence === "low" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Unofficial acceptance rate &mdash; this university publishes none; this is{" "}
+                    {factualRate!.sourceName ?? "a third party"}&apos;s estimate
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    University historical acceptance rate ({LEVEL_LABEL[factualRate!.level]}, {factualRate!.year})
+                  </p>
+                )}
                 <p className="text-sm font-medium">{factualRate!.acceptanceRate}%</p>
                 <p className="mt-2 text-xs text-muted-foreground">Your estimated admission likelihood</p>
                 <p className="text-sm font-medium">{chancePoint(analysis.chanceMin, analysis.chanceMax)}%</p>

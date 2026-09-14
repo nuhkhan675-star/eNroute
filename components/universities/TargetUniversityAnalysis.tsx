@@ -25,6 +25,18 @@ function selectivityLine(analysis: UniversityAnalysisRecord): { text: string; is
   const name = analysis.universityName;
   switch (analysis.selectivityBasis) {
     case "acceptance_rate":
+      // A university that publishes nothing can still hold a third-party
+      // estimate on record (NUS, NTU). That is not "accepts X% of all
+      // applicants" -- it is somebody's guess, and is worded as one.
+      if (analysis.selectivityRateUnofficial) {
+        const src = analysis.selectivityRateSource ? ` -- ${analysis.selectivityRateSource}'s estimate` : "";
+        return {
+          text: rate != null
+            ? `${name} is thought to accept around ${rate}% of applicants; it publishes no official rate${src}`
+            : `Only an unofficial acceptance estimate exists for ${name}`,
+          isEstimate: true,
+        };
+      }
       // Named subject and "of all applicants" together stop this being read as
       // the student's own number, which sits directly above it.
       return {

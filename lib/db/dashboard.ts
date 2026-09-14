@@ -14,6 +14,9 @@ export interface DashboardMatchCard {
   reasoning: string;
   /** Drives the honest source label on the card -- see UniversityMatchCard. */
   selectivityBasis: UniversityAnalysisRecord["selectivityBasis"];
+  /** The rate behind this card is a third-party estimate, not a published figure. */
+  selectivityRateUnofficial?: boolean;
+  selectivityRateSource?: string | null;
   analyzedAt?: string;
 }
 
@@ -46,6 +49,8 @@ export async function getDashboardMatches(profileId: string): Promise<DashboardM
       confidence: r.confidence,
       reasoning: r.reasoning,
       selectivityBasis: r.selectivityBasis,
+      selectivityRateUnofficial: r.selectivityRateUnofficial ?? false,
+      selectivityRateSource: r.selectivityRateSource ?? null,
       analyzedAt: r.analyzedAt,
     }))
     .sort((a, b) => CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category]);
