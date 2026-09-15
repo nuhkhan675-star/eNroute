@@ -202,11 +202,11 @@ const LOG_ODDS_GAIN = 1.2;
  * decision (2026-09-15) and for this one school only. The damping floor of
  * 0.35 is a US-holistic assumption; at LSE, where grades are the primary
  * filter and the stored 9% rate is itself a conservative choice, a floor of
- * 0.6 lets a candidate exceeding the typical offer move from ~13% to ~16%.
+ * 0.8 lets a candidate exceeding the typical offer move from ~13% to ~18%.
  * Nothing else in the engine consults this table.
  */
 const UPWARD_DAMPING_FLOOR_OVERRIDES: Record<string, number> = {
-  "London School of Economics and Political Science": 0.6,
+  "London School of Economics and Political Science": 0.8,
 };
 const DEFAULT_UPWARD_DAMPING_FLOOR = 0.35;
 
