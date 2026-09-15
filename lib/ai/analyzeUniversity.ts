@@ -155,6 +155,13 @@ export async function analyzeUniversities(params: {
         selectivityRate:
           detail.admissionStatistics?.acceptanceRate ??
           (selectivity.basis === "ai_estimate" ? aiEstimatedAcceptanceRate : null),
+        // A stored rate at "low" confidence is a third-party figure, not a
+        // published one, and is presented as our estimate. Set here as well as
+        // in rowToRecord, because the target-analysis card renders the fresh
+        // result straight from the API without a round trip through the DB.
+        selectivityRateUnofficial:
+          selectivity.basis === "acceptance_rate" && detail.admissionStatistics?.confidence === "low",
+        selectivityRateSource: detail.admissionStatistics?.sourceName ?? null,
         academicScore: Math.round(academic.academic_score * 10),
         programFitScore: Math.round(fit.program_fit_score * 10),
         extracurricularScore: Math.round(extracurricular.extracurricular_score * 10),

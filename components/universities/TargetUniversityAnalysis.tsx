@@ -25,15 +25,12 @@ function selectivityLine(analysis: UniversityAnalysisRecord): { text: string; is
   const name = analysis.universityName;
   switch (analysis.selectivityBasis) {
     case "acceptance_rate":
-      // A university that publishes nothing can still hold a third-party
-      // estimate on record (NUS, NTU). That is not "accepts X% of all
-      // applicants" -- it is somebody's guess, and is worded as one.
+      // A low-confidence stored rate (LSE, NUS, NTU) is an estimate, not a
+      // published figure, and is worded exactly like the model's own estimate
+      // rather than as "accepts X% of all applicants".
       if (analysis.selectivityRateUnofficial) {
-        const src = analysis.selectivityRateSource ?? "a third party";
         return {
-          text: rate != null
-            ? `${name} is thought to accept around ${rate}% of applicants -- ${src}'s estimate, not a published figure`
-            : `Only an unofficial acceptance estimate exists for ${name}`,
+          text: rate != null ? `We estimate ${name} accepts ~${rate}% of all applicants` : `Our estimate for ${name}`,
           isEstimate: true,
         };
       }

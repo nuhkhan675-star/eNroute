@@ -87,9 +87,7 @@ export function UniversityMatchCard({ card, initialSaved }: { card: DashboardMat
                 nothing, and the figure on record is a third party's guess.
                 That gets the same honest badge as our own estimates. */}
             {card.selectivityRateUnofficial ? (
-              <p className="text-xs text-muted-foreground">
-                Unofficial acceptance rate{card.selectivityRateSource ? ` (${card.selectivityRateSource} estimate)` : ""}
-              </p>
+              <p className="text-xs text-muted-foreground">Our estimate</p>
             ) : (
               BASIS_NOTICES[card.selectivityBasis] && (
                 <p className={`text-xs ${BASIS_NOTICES[card.selectivityBasis]!.style}`}>

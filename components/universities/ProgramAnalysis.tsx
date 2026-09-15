@@ -94,10 +94,7 @@ export function ProgramAnalysis({ analysis, factualRate }: Props) {
             {hasFactualRate ? (
               <>
                 {factualRate!.confidence === "low" ? (
-                  <p className="text-xs text-muted-foreground">
-                    Unofficial acceptance rate &mdash; {factualRate!.sourceName ?? "a third party"}&apos;s
-                    estimate, not a published figure
-                  </p>
+                  <p className="text-xs text-muted-foreground">Our estimate &mdash; estimated acceptance rate</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     University historical acceptance rate ({LEVEL_LABEL[factualRate!.level]}, {factualRate!.year})
