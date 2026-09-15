@@ -197,7 +197,20 @@ const LOG_ODDS_GAIN = 1.2;
  * the shift is relative to that school's own odds -- while letting genuinely
  * different schools produce genuinely different numbers.
  */
-function midpointFromRealRate(composite: number, rate: number): number {
+/**
+ * Per-university relaxation of the upward damping below, by explicit
+ * decision (2026-09-15) and for this one school only. The damping floor of
+ * 0.35 is a US-holistic assumption; at LSE, where grades are the primary
+ * filter and the stored 9% rate is itself a conservative choice, a floor of
+ * 0.6 lets a candidate exceeding the typical offer move from ~13% to ~16%.
+ * Nothing else in the engine consults this table.
+ */
+const UPWARD_DAMPING_FLOOR_OVERRIDES: Record<string, number> = {
+  "London School of Economics and Political Science": 0.6,
+};
+const DEFAULT_UPWARD_DAMPING_FLOOR = 0.35;
+
+function midpointFromRealRate(composite: number, rate: number, universityName?: string | null): number {
   // Clamp away from the asymptotes so logit() stays finite for 0% / 100%.
   const base = Math.min(0.995, Math.max(0.005, rate / 100));
   const logit = Math.log(base / (1 - base));
@@ -216,7 +229,8 @@ function midpointFromRealRate(composite: number, rate: number): number {
   // 14% the old tier band gave. At an 80%-admit school the damping is
   // effectively 1.0 and nothing changes, because a lift there is genuinely
   // earned and carries no such downside.
-  const upwardDamping = Math.min(1, 0.35 + base);
+  const floor = (universityName ? UPWARD_DAMPING_FLOOR_OVERRIDES[universityName] : undefined) ?? DEFAULT_UPWARD_DAMPING_FLOOR;
+  const upwardDamping = Math.min(1, floor + base);
   const shifted = logit + (rawShift > 0 ? rawShift * upwardDamping : rawShift);
 
   const p = 1 / (1 + Math.exp(-shifted));
@@ -288,7 +302,9 @@ export function computeAdmissionPrediction(
   selectivity: SelectivityResult,
   confidenceInput: Omit<ConfidenceInput, "selectivityBasis">,
   /** Selects the country's weighting profile. Null falls back to the default. */
-  countryName?: string | null
+  countryName?: string | null,
+  /** Only consulted for the per-university damping override above. */
+  universityName?: string | null
 ): AdmissionPrediction {
   const weights = resolveWeights(countryName);
   const composite = computeCompositeScore(scores, weights);
@@ -297,7 +313,7 @@ export function computeAdmissionPrediction(
   // real number to anchor to.
   const midpoint =
     selectivity.basis === "acceptance_rate" && selectivity.rate != null
-      ? midpointFromRealRate(composite, selectivity.rate)
+      ? midpointFromRealRate(composite, selectivity.rate, universityName)
       : computeMidpoint(composite, selectivity.tier);
   const confidence = computeConfidence({ ...confidenceInput, selectivityBasis: selectivity.basis });
   const halfWidth = RANGE_HALF_WIDTH[confidence];
@@ -350,12 +366,13 @@ export function recomputePrediction(
   scores: ProfileDimensionScores,
   selectivity: SelectivityResult,
   confidence: PredictionConfidence,
-  countryName?: string | null
+  countryName?: string | null,
+  universityName?: string | null
 ): Pick<AdmissionPrediction, "chanceMin" | "chanceMax" | "category" | "midpoint" | "competitivenessComposite"> {
   const composite = computeCompositeScore(scores, resolveWeights(countryName));
   const midpoint =
     selectivity.basis === "acceptance_rate" && selectivity.rate != null
-      ? midpointFromRealRate(composite, selectivity.rate)
+      ? midpointFromRealRate(composite, selectivity.rate, universityName)
       : computeMidpoint(composite, selectivity.tier);
 
   const halfWidth = RANGE_HALF_WIDTH[confidence];

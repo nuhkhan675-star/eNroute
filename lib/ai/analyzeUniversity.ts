@@ -122,7 +122,8 @@ export async function analyzeUniversities(params: {
           hasCompleteProfile: profile.subjects.length > 0 && profile.extracurriculars.length > 0,
         },
         // Selects the country's weighting profile -- see COUNTRY_WEIGHTS.
-        detail.countryName
+        detail.countryName,
+        detail.name
       );
 
       // Backend-only provenance for the scoring itself: which country profile
